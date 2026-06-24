@@ -7,6 +7,8 @@ Reverse-engineered from the vendor's published source
 (`gitee.com/led-show/ileddemo`) and the shipped APK. Protocol details:
 `.claude/docs/analysis/iledcolor-ble-protocol-spec.md`.
 
+[![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=winnerplace&repository=ha-iledcolor-led-matrix&category=integration)
+
 > **Status: 26.6.1 — validation build.** Power and brightness only. The frames
 > are derived statically; confirm against your device before relying on it. Text /
 > image / GIF (bulk transfer) are not implemented yet.
@@ -22,11 +24,17 @@ Versioning: CalVer `YY.M.BUILD` (no zero-padding; build number starts at 1).
 
 ## Install via HACS
 
+One click — [![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=winnerplace&repository=ha-iledcolor-led-matrix&category=integration) — then install and restart.
+
+Or manually:
+
 1. HACS → ⋮ → **Custom repositories** → add this repo's GitHub URL, category
    **Integration**.
 2. Install **iLEDcolor LED Matrix**, then restart Home Assistant.
-3. Settings → Devices & Services → **Add Integration** → *iLEDcolor*, or accept
-   the auto-discovered device. Pick your matrix from the list.
+3. Add the integration:
+   [![Start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=iledcolor)
+   — or Settings → Devices & Services → **Add Integration** → *iLEDcolor*, or
+   accept the auto-discovered device. Pick your matrix from the list.
 
 ## What works
 
