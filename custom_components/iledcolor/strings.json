@@ -1,0 +1,38 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "confirm": {
+        "title": "iLEDcolor LED Matrix",
+        "description": "Set up {name} ({size})?"
+      },
+      "user": {
+        "title": "iLEDcolor LED Matrix",
+        "description": "Select your LED matrix.",
+        "data": {
+          "address": "Device"
+        }
+      }
+    },
+    "abort": {
+      "no_devices_found": "No Bluetooth devices found. Make sure the device is powered on, in range, and not connected to the phone app.",
+      "already_configured": "This device is already configured."
+    }
+  },
+  "services": {
+    "send_raw": {
+      "name": "Send raw frame",
+      "description": "Write raw bytes to the device for protocol experimentation.",
+      "fields": {
+        "data": {
+          "name": "Data (hex)",
+          "description": "Hex byte string, e.g. 54 09 00 04 05 00 00 66."
+        },
+        "characteristic": {
+          "name": "Characteristic",
+          "description": "write1 (A951, commands) or write2 (A952, bulk)."
+        }
+      }
+    }
+  }
+}

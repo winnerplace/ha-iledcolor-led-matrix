@@ -1,0 +1,22 @@
+send_raw:
+  name: Send raw frame
+  description: >-
+    Write raw bytes to the device for protocol experimentation. Bytes are sent
+    verbatim (no framing/checksum added) to the chosen characteristic.
+  fields:
+    data:
+      name: Data (hex)
+      description: Hex byte string, e.g. "54 09 00 04 05 00 00 66".
+      required: true
+      example: "540900040500 0066"
+      selector:
+        text:
+    characteristic:
+      name: Characteristic
+      description: write1 (A951, commands) or write2 (A952, bulk).
+      default: write1
+      selector:
+        select:
+          options:
+            - write1
+            - write2

@@ -1,0 +1,8 @@
+# reverse-engineering artifacts (vendor APK, decompiled output, vendor source) — do not publish
+_re/
+*.xapk
+*.apk
+
+__pycache__/
+*.pyc
+.DS_Store
