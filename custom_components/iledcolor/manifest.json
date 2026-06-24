@@ -4,9 +4,9 @@
   "version": "26.6.1",
   "config_flow": true,
   "dependencies": ["bluetooth_adapters"],
-  "codeowners": ["@CHANGEME"],
-  "documentation": "https://github.com/CHANGEME/ha-iledcolor",
-  "issue_tracker": "https://github.com/CHANGEME/ha-iledcolor/issues",
+  "codeowners": ["@ohilseung"],
+  "documentation": "https://github.com/ohilseung/ha-iledcolor-led-matrix",
+  "issue_tracker": "https://github.com/ohilseung/ha-iledcolor-led-matrix/issues",
   "iot_class": "local_push",
   "requirements": ["bleak-retry-connector>=3.5.0"],
   "bluetooth": [

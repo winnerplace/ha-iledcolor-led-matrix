@@ -57,7 +57,6 @@ characteristic: write1
 
 ## Notes
 
-- Edit `manifest.json` `codeowners` / `documentation` / `issue_tracker` and the
-  HACS repo URL before publishing.
+- Repo: https://github.com/ohilseung/ha-iledcolor-led-matrix
 - Not affiliated with the manufacturer. iDotMatrix integrations are **not**
   compatible (different GATT service and framing).
