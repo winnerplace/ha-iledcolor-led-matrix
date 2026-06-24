@@ -5,8 +5,8 @@
   "config_flow": true,
   "dependencies": ["bluetooth_adapters"],
   "codeowners": ["@ohilseung"],
-  "documentation": "https://github.com/ohilseung/ha-iledcolor-led-matrix",
-  "issue_tracker": "https://github.com/ohilseung/ha-iledcolor-led-matrix/issues",
+  "documentation": "https://github.com/winnerplace/ha-iledcolor-led-matrix",
+  "issue_tracker": "https://github.com/winnerplace/ha-iledcolor-led-matrix/issues",
   "iot_class": "local_push",
   "requirements": ["bleak-retry-connector>=3.5.0"],
   "bluetooth": [

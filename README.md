@@ -57,6 +57,6 @@ characteristic: write1
 
 ## Notes
 
-- Repo: https://github.com/ohilseung/ha-iledcolor-led-matrix
+- Repo: https://github.com/winnerplace/ha-iledcolor-led-matrix
 - Not affiliated with the manufacturer. iDotMatrix integrations are **not**
   compatible (different GATT service and framing).
