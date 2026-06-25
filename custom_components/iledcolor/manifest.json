@@ -1,7 +1,7 @@
 {
   "domain": "iledcolor",
   "name": "iLEDcolor LED Matrix",
-  "version": "26.6.7",
+  "version": "26.6.8",
   "config_flow": true,
   "dependencies": ["bluetooth_adapters"],
   "codeowners": ["@ohilseung"],

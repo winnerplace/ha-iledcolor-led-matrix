@@ -72,10 +72,47 @@ def test_full_color_lut_applied():
 def test_mono_column_major_threshold_and_packing():
     black, white = (0, 0, 0), (255, 255, 255)
     pixels = [[black, white, black, white, black, white, black, white]]
-    # avg gray = 127.5; black(0)<avg -> on, white(255)<avg -> off
+    # avg gray = 127.5; demo rule: gray >= avg -> on (white on)
     # column-major over width: x0..x7 -> mask 0x80,0x40,...
     out = bulk.encode_mono(pixels, 8, 1)
-    assert out == bytes([0x80 | 0x20 | 0x08 | 0x02])  # 0xAA
+    assert out == bytes([0x40 | 0x10 | 0x04 | 0x01])  # 0x55
+
+
+def test_graffiti_program_params_layout():
+    p = bulk.graffiti_program_params(96, 16, frame_count=1, effects=0, speed=5)
+    assert len(p) == 22
+    assert p[:4] == bytes(4)
+    assert p[4:6] == (96).to_bytes(2, "big")
+    assert p[6:8] == (16).to_bytes(2, "big")
+    assert p[8:11] == bytes(3)
+    assert p[11] == 0  # source_type
+    assert p[12:14] == (1).to_bytes(2, "big")  # frame_count
+    assert p[14] == 0  # effects
+    assert p[15] == 5  # speed
+    assert p[16] == 30  # dwell = max(30, 30) when effects == 0
+    assert p[-3:] == bytes(3)
+
+
+def test_legacy_source_layout():
+    params = bytes(22)
+    pixels = b"\xAA\xBB"
+    src = bulk.legacy_source(params, pixels)
+    data = src[4:]
+    assert src[:4] == bulk.crc32c(data).to_bytes(4, "big")
+    assert data[:4] == bytes([1, 0, 0, 0])
+    assert data[4:20] == bytes(16)
+    assert data[20:42] == params
+    assert data[42:] == pixels
+
+
+def test_legacy_header_frame_layout():
+    text = bytes(range(20))
+    f = bulk.legacy_header_frame(text)
+    assert f[:2] == bytes([0x54, 0x06])
+    payload = f[4:-2]
+    assert payload[:4] == text[:4]
+    assert payload[4:8] == (20).to_bytes(4, "big")
+    assert payload[8:11] == bytes(3)
 
 
 def test_legacy_bulk_frames():

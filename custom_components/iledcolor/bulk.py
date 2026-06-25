@@ -107,7 +107,7 @@ def encode_mono(pixels: Grid, width: int, height: int) -> bytes:
     n = 0
     for x in range(width):
         for y in range(height):
-            if round(_gray(pixels[y][x])) < avg:
+            if round(_gray(pixels[y][x])) >= avg:
                 cur |= MONO_MASK[n % 8]
             n += 1
             if n % 8 == 0:
@@ -166,3 +166,38 @@ def program_resource(items: Sequence[bytes]) -> bytes:
 
 def program_frame(items: Sequence[bytes]) -> bytes:
     return simple_frame(OP_PROGRAM, program_resource(items))
+
+
+def graffiti_program_params(
+    width: int,
+    height: int,
+    *,
+    source_type: int = 0,
+    frame_count: int = 1,
+    effects: int = 0,
+    speed: int = 0,
+    dwell: int = 30,
+    frame_type: int = 0,
+    brightness: int = 100,
+) -> bytes:
+    dwell = max(dwell, 30) if effects == 0 else dwell
+    return (
+        bytes([0, 0, 0, 0])
+        + _be16(width)
+        + _be16(height)
+        + bytes([0, 0, 0])
+        + bytes([source_type & 0xFF])
+        + _be16(frame_count)
+        + bytes([effects & 0xFF, speed & 0xFF, dwell & 0xFF, frame_type & 0xFF, brightness & 0xFF])
+        + bytes([0, 0, 0])
+    )
+
+
+def legacy_source(params: bytes, pixel_data: bytes) -> bytes:
+    data = bytes([1, 0, 0, 0]) + bytes(16) + params + pixel_data
+    return crc32c(data).to_bytes(4, "big") + data
+
+
+def legacy_header_frame(text_data: bytes) -> bytes:
+    payload = text_data[:4] + len(text_data).to_bytes(4, "big") + bytes([0, 0, 0])
+    return simple_frame(OP_PROGRAM, payload)
