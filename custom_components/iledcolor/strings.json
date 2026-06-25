@@ -44,6 +44,11 @@
       "status_display": {
         "name": "Status display"
       }
+    },
+    "text": {
+      "display_text": {
+        "name": "Display text"
+      }
     }
   },
   "services": {

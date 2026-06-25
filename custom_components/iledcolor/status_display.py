@@ -44,6 +44,11 @@ class StatusDisplay:
         self.interval = int(opts.get(CONF_INTERVAL, DEFAULT_INTERVAL))
         self.enabled = bool(opts.get(CONF_ENABLED, False))
         self.entities = list(opts.get(CONF_ENTITIES, []))
+        if self.enabled and not self.entities:
+            _LOGGER.warning(
+                "Status display is on but no entities are selected; pick them in the "
+                "integration options (Settings > Devices & Services > iLEDcolor > Configure)"
+            )
         self._reschedule()
 
     async def async_set(self, **changes) -> None:

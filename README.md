@@ -9,17 +9,18 @@ Reverse-engineered from the vendor's published source
 
 [![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=winnerplace&repository=ha-iledcolor-led-matrix&category=integration)
 
-> **Status: 26.6.5 — validation build.** 26.6.5 fixes the advertisement parse
-> off-by-one (panels were read as e.g. `24579x4096`; now correct), keeps the legacy
-> power/brightness framing as default, and adds integration **options** to override
-> panel size / color type / frame generation when auto-detection is wrong.
+> **Status: 26.6.6 — validation build.** Power and brightness (legacy framing) are
+> confirmed working on a field device. 26.6.6 adds a **Display text** entity (type
+> on the device page → shows on the panel) and a **legacy `0x54 0x00` bulk** path
+> selected by the *Frame generation* option (default `legacy`), since the
+> field device is the older generation.
 >
-> Power and brightness (legacy framing) are the high-confidence path. Text / image /
-> GIF use the reverse-engineered 0xA8 bulk format
-> (`.claude/docs/analysis/iledcolor-bulk-wire-spec.md`); the disassembly shows 0xA8
-> is unconditional (no legacy chunk path), but the pixel-block byte alignment is
-> **still unverified on hardware** — treat `display_*` and the Status display as
-> experimental until confirmed with a capture.
+> Display (text / image / GIF / Status display) is **experimental and unverified on
+> hardware** — the bulk framing and pixel alignment still need a capture to confirm.
+> If display does nothing: (1) pick entities in **Configure** for the Status
+> display, (2) make sure panel size is correct (override it in **Configure** if not),
+> (3) try the other *Frame generation* value, (4) enable debug logging and share the
+> `A953` notify bytes.
 
 Versioning: CalVer `YY.M.BUILD` (no zero-padding; build number starts at 1).
 
@@ -56,9 +57,11 @@ Experimental (bulk path, unverified on hardware):
 - `iledcolor.display_text` — rasterize text and send it as pixels.
 - `iledcolor.display_image` / `iledcolor.display_gif` — fit a local file or URL to
   the panel and send it.
+- **Display text** entity: type text on the device page to push it to the panel.
 - **Status display**: a `number` (update interval, 30–600 s slider) + `switch`
   pair, plus an options flow to pick sensor entities, that rotates their values
-  onto the panel via `display_text`.
+  onto the panel via `display_text`. (The switch does nothing until you pick
+  entities in **Configure**.)
 
 Enable debug logging to watch the wire:
 

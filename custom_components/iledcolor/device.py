@@ -91,7 +91,7 @@ class IledColorDevice:
     def _on_notify(self, _char, data: bytearray) -> None:
         self.last_notify = bytes(data)
         _LOGGER.debug("%s notify <- %s", self.address, self.last_notify.hex())
-        if data and data[0] == bulk.BULK_MARKER:
+        if data:
             self._ack.set()
         for cb in list(self._listeners):
             cb(self.last_notify)
@@ -143,10 +143,12 @@ class IledColorDevice:
             await self._ensure()
             assert self._client is not None
             mtu = getattr(self._client, "mtu_size", 0) or _DEFAULT_MTU
-            chunks = bulk.bulk_frames(frame, mtu)
+            chunker = bulk.bulk_frames if self._app2024() else bulk.legacy_bulk_frames
+            chunks = chunker(frame, mtu)
             _LOGGER.debug(
-                "%s bulk send: %d bytes, %d chunks, mtu=%d",
+                "%s bulk send (%s): %d bytes, %d chunks, mtu=%d",
                 self.address,
+                "0xA8" if self._app2024() else "legacy",
                 len(frame),
                 len(chunks),
                 mtu,

@@ -60,6 +60,16 @@ def bulk_frames(payload: bytes, mtu: int) -> list[bytes]:
     return frames
 
 
+def legacy_bulk_frames(payload: bytes, mtu: int) -> list[bytes]:
+    size = max(1, mtu - 32)  # demo: mtu -= 20; chunkSize = mtu - 12
+    frames = [
+        simple_frame(BULK_SUB_DATA, idx.to_bytes(4, "big") + _be16(len(payload[off : off + size])) + payload[off : off + size])
+        for idx, off in enumerate(range(0, len(payload), size))
+    ]
+    frames.append(simple_frame(0x01, [0x01]))
+    return frames
+
+
 def crc32c(data: bytes) -> int:
     crc = 0xFFFFFFFF
     for byte in data:

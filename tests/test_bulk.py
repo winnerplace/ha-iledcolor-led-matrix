@@ -78,6 +78,23 @@ def test_mono_column_major_threshold_and_packing():
     assert out == bytes([0x80 | 0x20 | 0x08 | 0x02])  # 0xAA
 
 
+def test_legacy_bulk_frames():
+    payload = bytes(range(100))
+    frames = bulk.legacy_bulk_frames(payload, 60)  # size = 60-32 = 28
+    size = 60 - 32
+    expected_data = -(-len(payload) // size)  # ceil(100/28) = 4
+    assert len(frames) == expected_data + 1  # + end frame
+    for i, f in enumerate(frames[:-1]):
+        # each is a 0x54 0x00 simple frame: 54 00 LEN [idx4 + be16(len) + chunk] SUM
+        assert f[:2] == bytes([0x54, 0x00])
+        payload_in = f[4:-2]
+        assert int.from_bytes(payload_in[0:4], "big") == i
+        chunk_len = int.from_bytes(payload_in[4:6], "big")
+        assert chunk_len == len(payload_in) - 6
+    # end frame = 54 01 00 03 01 SUM
+    assert frames[-1] == bulk.simple_frame(0x01, [0x01])
+
+
 def test_simple_frame_layout():
     f = bulk.simple_frame(0x06, b"\x01\x02")
     assert f[:2] == bytes([0x54, 0x06])
