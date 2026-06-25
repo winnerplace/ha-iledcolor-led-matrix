@@ -17,6 +17,8 @@ from .const import (
     CHAR_WRITE1,
     CHAR_WRITE2,
     CONF_COLOR_TYPE,
+    CONF_FLIP_H,
+    CONF_FLIP_V,
     CONF_GENERATION,
     CONF_HEIGHT,
     CONF_WIDTH,
@@ -182,7 +184,9 @@ class IledColorDevice:
                 await self._stream(chunks, CHAR_WRITE2)
                 return
             if gif:
-                text_data = bulk.legacy_gif_source(width, height, frames, speed=speed, stay=stay)
+                text_data = bulk.legacy_gif_source(
+                    width, height, frames, speed=speed, stay=stay, effects=effects
+                )
             else:
                 params = bulk.graffiti_program_params(
                     width, height, frame_count=len(frames), effects=effects, speed=speed, dwell=stay
@@ -201,26 +205,27 @@ class IledColorDevice:
             await self._client.write_gatt_char(CHAR_WRITE1, header, response=False)
             await self._stream(chunks, CHAR_WRITE2)
 
-    def _raster_text(self, text: str, w: int, h: int, color: RGB) -> bytes:
-        grid = render.rasterize_text(text, w, h, color=color)
+    def _encode(self, grid, w: int, h: int) -> bytes:
+        opts = self.entry.options
+        if opts.get(CONF_FLIP_H):
+            grid = [list(reversed(row)) for row in grid]
+        if opts.get(CONF_FLIP_V):
+            grid = list(reversed(grid))
         return bulk.encode_frame(grid, w, h, self._color_type())
+
+    def _raster_text(self, text: str, w: int, h: int, color: RGB) -> bytes:
+        return self._encode(render.rasterize_text(text, w, h, color=color), w, h)
 
     def _raster_fill(self, color: RGB, w: int, h: int) -> bytes:
-        grid = [[color for _ in range(w)] for _ in range(h)]
-        return bulk.encode_frame(grid, w, h, self._color_type())
+        return self._encode([[color for _ in range(w)] for _ in range(h)], w, h)
 
     def _raster_texts(self, texts: list[str], w: int, h: int, color: RGB) -> list[bytes]:
-        color_type = self._color_type()
-        return [
-            bulk.encode_frame(render.rasterize_text(t, w, h, color=color), w, h, color_type)
-            for t in texts
-        ]
+        return [self._encode(render.rasterize_text(t, w, h, color=color), w, h) for t in texts]
 
     def _raster_image(
         self, source: str | bytes, w: int, h: int, fit: str, chroma: RGB | None, tol: int
     ) -> bytes:
-        grid = render.load_image(source, w, h, fit=fit, chroma=chroma, tol=tol)
-        return bulk.encode_frame(grid, w, h, self._color_type())
+        return self._encode(render.load_image(source, w, h, fit=fit, chroma=chroma, tol=tol), w, h)
 
     def _raster_gif(
         self,
@@ -232,11 +237,10 @@ class IledColorDevice:
         tol: int,
         max_frames: int | None,
     ) -> tuple[list[bytes], int]:
-        color_type = self._color_type()
         grids, delays = render.load_gif(
             source, w, h, fit=fit, chroma=chroma, tol=tol, max_frames=max_frames
         )
-        frames = [bulk.encode_frame(g, w, h, color_type) for g in grids]
+        frames = [self._encode(g, w, h) for g in grids]
         return frames, gif_speed(delays)
 
     async def display_text(

@@ -40,6 +40,8 @@ DEFAULT_INTERVAL = 60
 CONF_EFFECT = "effect"
 CONF_SPEED = "speed"
 CONF_DWELL = "dwell"
+CONF_FLIP_H = "flip_h"
+CONF_FLIP_V = "flip_v"
 
 DEFAULT_EFFECT = 0
 DEFAULT_SPEED = 1

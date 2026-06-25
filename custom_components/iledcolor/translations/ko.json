@@ -44,7 +44,9 @@
       "effect": { "name": "효과" }
     },
     "switch": {
-      "status_display": { "name": "상태표시" }
+      "status_display": { "name": "상태표시" },
+      "flip_h": { "name": "좌우 반전" },
+      "flip_v": { "name": "상하 반전" }
     },
     "text": {
       "display_text": { "name": "텍스트 표시" }

@@ -44,7 +44,9 @@
       "effect": { "name": "Effect" }
     },
     "switch": {
-      "status_display": { "name": "Status display" }
+      "status_display": { "name": "Status display" },
+      "flip_h": { "name": "Flip horizontal" },
+      "flip_v": { "name": "Flip vertical" }
     },
     "text": {
       "display_text": { "name": "Display text" }

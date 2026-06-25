@@ -115,6 +115,13 @@ def test_legacy_gif_source_appends_trailing_speed():
     assert pixel == b"".join(frames) + speed.to_bytes(2, "big")
 
 
+def test_legacy_gif_params_carries_effects():
+    p = bulk.legacy_gif_params(96, 16, 3, speed=1, stay=30, effects=2)
+    assert p[14] == 2  # effects byte (scroll right)
+    src = bulk.legacy_gif_source(96, 16, [b"\x01", b"\x02"], speed=1, stay=30, effects=4)
+    assert src[4:][20:42][14] == 4  # effects survives into source params
+
+
 def test_legacy_gif_source_single_frame_still_appends_speed():
     frame = bytes([9, 8, 7])
     src = bulk.legacy_gif_source(1, 1, [frame], speed=4, stay=3)
