@@ -7,3 +7,9 @@ __pycache__/
 *.pyc
 .DS_Store
 .idea/
+
+# vendor demo source (reference only, do not ship)
+reference/
+
+# local agent workspace (docs, tools were moved to /tools)
+.claude/

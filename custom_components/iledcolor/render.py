@@ -31,19 +31,68 @@ def _fit(image, width: int, height: int, fit: str, bg: RGB):
     return canvas
 
 
+def _flatten(image, bg: RGB):
+    from PIL import Image
+
+    if image.mode in ("RGBA", "LA", "PA") or (image.mode == "P" and "transparency" in image.info):
+        rgba = image.convert("RGBA")
+        canvas = Image.new("RGBA", rgba.size, (bg[0], bg[1], bg[2], 255))
+        canvas.alpha_composite(rgba)
+        return canvas.convert("RGB")
+    return image.convert("RGB")
+
+
+def _key_out(image, chroma: RGB | None, tol: int, bg: RGB):
+    if chroma is None:
+        return image
+    rgb = image.convert("RGB")
+    px = rgb.load()
+    cr, cg, cb = chroma
+    for y in range(rgb.height):
+        for x in range(rgb.width):
+            r, g, b = px[x, y]
+            if abs(r - cr) <= tol and abs(g - cg) <= tol and abs(b - cb) <= tol:
+                px[x, y] = bg
+    return rgb
+
+
+_FONT_CANDIDATES = (
+    "/System/Library/Fonts/AppleSDGothicNeo.ttc",
+    "/System/Library/Fonts/Supplemental/AppleGothic.ttf",
+    "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+)
+
+
+def _default_font_path() -> str | None:
+    import os
+
+    for path in _FONT_CANDIDATES:
+        if os.path.exists(path):
+            return path
+    return None
+
+
 def _pick_font(text: str, width: int, height: int, font_path: str | None):
     from PIL import ImageFont
 
+    path = font_path or _default_font_path()
+
+    def _at(size: int):
+        if path:
+            try:
+                return ImageFont.truetype(path, size)
+            except OSError:
+                pass
+        return ImageFont.load_default(size=size)
+
     for size in range(height, 5, -1):
-        font = (
-            ImageFont.truetype(font_path, size)
-            if font_path
-            else ImageFont.load_default(size=size)
-        )
+        font = _at(size)
         box = font.getbbox(text)
         if (box[2] - box[0]) <= width and (box[3] - box[1]) <= height:
             return font
-    return ImageFont.load_default(size=6)
+    return _at(6)
 
 
 def rasterize_text(
@@ -74,12 +123,23 @@ def load_image(
     *,
     fit: str = "contain",
     bg: RGB = (0, 0, 0),
+    chroma: RGB | None = None,
+    tol: int = 0,
 ) -> Grid:
     from PIL import Image
 
     handle = io.BytesIO(source) if isinstance(source, (bytes, bytearray)) else source
     with Image.open(handle) as image:
-        return _to_grid(_fit(image.convert("RGB"), width, height, fit, bg), width, height)
+        flat = _key_out(_flatten(image, bg), chroma, tol, bg)
+        return _to_grid(_fit(flat, width, height, fit, bg), width, height)
+
+
+def _decimate(frames: list[Grid], delays: list[int], max_frames: int | None):
+    if not max_frames or len(frames) <= max_frames:
+        return frames, delays
+    n = len(frames)
+    idx = sorted({min(n - 1, round(i * n / max_frames)) for i in range(max_frames)})
+    return [frames[j] for j in idx], [delays[j] for j in idx]
 
 
 def load_gif(
@@ -89,6 +149,9 @@ def load_gif(
     *,
     fit: str = "contain",
     bg: RGB = (0, 0, 0),
+    chroma: RGB | None = None,
+    tol: int = 0,
+    max_frames: int | None = None,
 ) -> tuple[list[Grid], list[int]]:
     from PIL import Image, ImageSequence
 
@@ -98,8 +161,9 @@ def load_gif(
     with Image.open(handle) as image:
         for frame in ImageSequence.Iterator(image):
             delays.append(int(frame.info.get("duration", 100)))
-            frames.append(_to_grid(_fit(frame.convert("RGB"), width, height, fit, bg), width, height))
-    return frames, delays
+            flat = _key_out(_flatten(frame, bg), chroma, tol, bg)
+            frames.append(_to_grid(_fit(flat, width, height, fit, bg), width, height))
+    return _decimate(frames, delays, max_frames)
 
 
 def read_gif_bytes(source: str | bytes) -> bytes:

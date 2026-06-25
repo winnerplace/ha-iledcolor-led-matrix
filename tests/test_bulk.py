@@ -93,6 +93,36 @@ def test_graffiti_program_params_layout():
     assert p[-3:] == bytes(3)
 
 
+def test_legacy_gif_params_layout():
+    p = bulk.legacy_gif_params(96, 16, 12, speed=2, stay=3)
+    assert len(p) == 22
+    assert p[11] == 0  # source_type
+    assert p[12:14] == (12).to_bytes(2, "big")  # frame_count
+    assert p[14] == 0  # effects
+    assert p[15] == 2  # speed
+    assert p[16] == 3  # stay (frame hold) is sent verbatim, no clamp
+
+
+def test_legacy_gif_source_appends_trailing_speed():
+    frames = [bytes([1, 2, 3]), bytes([4, 5, 6])]
+    speed = 7
+    src = bulk.legacy_gif_source(2, 1, frames, speed=speed, stay=3)
+    data = src[4:]
+    assert src[:4] == bulk.crc32c(data).to_bytes(4, "big")
+    params = data[20:42]
+    assert params[12:14] == (2).to_bytes(2, "big")  # frame_count
+    pixel = data[42:]
+    assert pixel == b"".join(frames) + speed.to_bytes(2, "big")
+
+
+def test_legacy_gif_source_single_frame_still_appends_speed():
+    frame = bytes([9, 8, 7])
+    src = bulk.legacy_gif_source(1, 1, [frame], speed=4, stay=3)
+    data = src[4:]
+    assert data[20:42][12:14] == (1).to_bytes(2, "big")  # frame_count == 1
+    assert data[42:] == frame + (4).to_bytes(2, "big")
+
+
 def test_legacy_source_layout():
     params = bytes(22)
     pixels = b"\xAA\xBB"

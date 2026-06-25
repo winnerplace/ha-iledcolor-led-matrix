@@ -201,3 +201,33 @@ def legacy_source(params: bytes, pixel_data: bytes) -> bytes:
 def legacy_header_frame(text_data: bytes) -> bytes:
     payload = text_data[:4] + len(text_data).to_bytes(4, "big") + bytes([0, 0, 0])
     return simple_frame(OP_PROGRAM, payload)
+
+
+def legacy_gif_params(
+    width: int,
+    height: int,
+    frame_count: int,
+    *,
+    speed: int,
+    stay: int,
+    source_type: int = 0,
+    brightness: int = 100,
+) -> bytes:
+    return (
+        bytes([0, 0, 0, 0])
+        + _be16(width)
+        + _be16(height)
+        + bytes([0, 0, 0])
+        + bytes([source_type & 0xFF])
+        + _be16(frame_count)
+        + bytes([0, speed & 0xFF, stay & 0xFF, 0, brightness & 0xFF])
+        + bytes([0, 0, 0])
+    )
+
+
+def legacy_gif_source(
+    width: int, height: int, frames: Sequence[bytes], *, speed: int, stay: int, brightness: int = 100
+) -> bytes:
+    params = legacy_gif_params(width, height, len(frames), speed=speed, stay=stay, brightness=brightness)
+    pixel_data = b"".join(frames) + int(speed).to_bytes(2, "big")
+    return legacy_source(params, pixel_data)

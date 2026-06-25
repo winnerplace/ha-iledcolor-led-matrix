@@ -31,6 +31,8 @@ _LOGGER = logging.getLogger(__name__)
 _DEFAULT_MTU = 23
 _ACK_TIMEOUT = 0.8
 _ACK_GIVE_UP = 3
+_WINDOW = 32
+_GIF_STAY = 10
 _MAX_PANEL = 1024
 RGB = tuple[int, int, int]
 
@@ -53,6 +55,7 @@ class IledColorDevice:
         self._lock = asyncio.Lock()
         self._listeners: list[Callable[[bytes], None]] = []
         self._ack = asyncio.Event()
+        self._acks = 0
 
     @property
     def connected(self) -> bool:
@@ -93,6 +96,7 @@ class IledColorDevice:
         self.last_notify = bytes(data)
         _LOGGER.debug("%s notify <- %s", self.address, self.last_notify.hex())
         if data:
+            self._acks += 1
             self._ack.set()
         for cb in list(self._listeners):
             cb(self.last_notify)
@@ -140,22 +144,21 @@ class IledColorDevice:
 
     async def _stream(self, chunks: list[bytes], char: str) -> None:
         assert self._client is not None
-        wait_ack = True
+        self._acks = 0
+        throttle = True
         misses = 0
-        for chunk in chunks:
-            self._ack.clear()
-            await self._client.write_gatt_char(char, chunk, response=False)
-            if not wait_ack:
-                continue
-            try:
-                await asyncio.wait_for(self._ack.wait(), timeout=_ACK_TIMEOUT)
-                misses = 0
-            except asyncio.TimeoutError:
+        for index, chunk in enumerate(chunks):
+            while throttle and index - self._acks >= _WINDOW:
                 self._ack.clear()
-                misses += 1
-                if misses >= _ACK_GIVE_UP:
-                    wait_ack = False
-                    _LOGGER.debug("%s no chunk ACK; streaming remainder", self.address)
+                try:
+                    await asyncio.wait_for(self._ack.wait(), timeout=_ACK_TIMEOUT)
+                    misses = 0
+                except asyncio.TimeoutError:
+                    misses += 1
+                    if misses >= _ACK_GIVE_UP:
+                        throttle = False
+                        _LOGGER.debug("%s no chunk ACK; streaming remainder", self.address)
+            await self._client.write_gatt_char(char, chunk, response=False)
 
     async def _send_source(
         self,
@@ -165,6 +168,8 @@ class IledColorDevice:
         *,
         effects: int = 0,
         speed: int = 0,
+        gif: bool = False,
+        stay: int = _GIF_STAY,
     ) -> None:
         async with self._lock:
             await self._ensure()
@@ -176,10 +181,13 @@ class IledColorDevice:
                 _LOGGER.debug("%s source send (0xA8): %d chunks, mtu=%d", self.address, len(chunks), mtu)
                 await self._stream(chunks, CHAR_WRITE2)
                 return
-            params = bulk.graffiti_program_params(
-                width, height, frame_count=len(frames), effects=effects, speed=speed
-            )
-            text_data = bulk.legacy_source(params, b"".join(frames))
+            if gif:
+                text_data = bulk.legacy_gif_source(width, height, frames, speed=speed, stay=stay)
+            else:
+                params = bulk.graffiti_program_params(
+                    width, height, frame_count=len(frames), effects=effects, speed=speed, dwell=stay
+                )
+                text_data = bulk.legacy_source(params, b"".join(frames))
             header = bulk.legacy_header_frame(text_data)
             chunks = bulk.legacy_bulk_frames(text_data, mtu)
             _LOGGER.debug(
@@ -197,32 +205,90 @@ class IledColorDevice:
         grid = render.rasterize_text(text, w, h, color=color)
         return bulk.encode_frame(grid, w, h, self._color_type())
 
-    def _raster_image(self, source: str | bytes, w: int, h: int, fit: str) -> bytes:
-        grid = render.load_image(source, w, h, fit=fit)
+    def _raster_fill(self, color: RGB, w: int, h: int) -> bytes:
+        grid = [[color for _ in range(w)] for _ in range(h)]
         return bulk.encode_frame(grid, w, h, self._color_type())
 
-    def _raster_gif(self, source: str | bytes, w: int, h: int, fit: str) -> tuple[list[bytes], int]:
+    def _raster_image(
+        self, source: str | bytes, w: int, h: int, fit: str, chroma: RGB | None, tol: int
+    ) -> bytes:
+        grid = render.load_image(source, w, h, fit=fit, chroma=chroma, tol=tol)
+        return bulk.encode_frame(grid, w, h, self._color_type())
+
+    def _raster_gif(
+        self,
+        source: str | bytes,
+        w: int,
+        h: int,
+        fit: str,
+        chroma: RGB | None,
+        tol: int,
+        max_frames: int | None,
+    ) -> tuple[list[bytes], int]:
         color_type = self._color_type()
-        grids, delays = render.load_gif(source, w, h, fit=fit)
+        grids, delays = render.load_gif(
+            source, w, h, fit=fit, chroma=chroma, tol=tol, max_frames=max_frames
+        )
         frames = [bulk.encode_frame(g, w, h, color_type) for g in grids]
         return frames, gif_speed(delays)
 
     async def display_text(
-        self, text: str, *, color: RGB = (255, 255, 255), effect: int = 0, speed: int = 50
+        self,
+        text: str,
+        *,
+        color: RGB = (255, 255, 255),
+        effect: int = 0,
+        speed: int = 1,
+        dwell: int = 30,
     ) -> None:
         w, h = self._panel()
         pixels = await self.hass.async_add_executor_job(self._raster_text, text, w, h, color)
-        await self._send_source(w, h, [pixels], effects=effect, speed=speed)
+        await self._send_source(w, h, [pixels], effects=effect, speed=speed, stay=dwell)
 
-    async def display_image(self, source: str | bytes, *, fit: str = "contain") -> None:
+    async def display_color(
+        self, color: RGB, *, effect: int = 0, speed: int = 1, dwell: int = 30
+    ) -> None:
         w, h = self._panel()
-        pixels = await self.hass.async_add_executor_job(self._raster_image, source, w, h, fit)
-        await self._send_source(w, h, [pixels])
+        pixels = await self.hass.async_add_executor_job(self._raster_fill, color, w, h)
+        await self._send_source(w, h, [pixels], effects=effect, speed=speed, stay=dwell)
 
-    async def display_gif(self, source: str | bytes, *, fit: str = "contain") -> None:
+    async def display_image(
+        self,
+        source: str | bytes,
+        *,
+        fit: str = "contain",
+        chroma: RGB | None = None,
+        tol: int = 0,
+        effect: int = 0,
+        speed: int = 1,
+        dwell: int = 30,
+    ) -> None:
         w, h = self._panel()
-        frames, speed = await self.hass.async_add_executor_job(self._raster_gif, source, w, h, fit)
-        await self._send_source(w, h, frames, speed=speed)
+        pixels = await self.hass.async_add_executor_job(
+            self._raster_image, source, w, h, fit, chroma, tol
+        )
+        await self._send_source(w, h, [pixels], effects=effect, speed=speed, stay=dwell)
+
+    async def display_gif(
+        self,
+        source: str | bytes,
+        *,
+        fit: str = "contain",
+        chroma: RGB | None = None,
+        tol: int = 0,
+        max_frames: int | None = None,
+        stay: int = _GIF_STAY,
+        effect: int = 0,
+        speed: int | None = None,
+    ) -> None:
+        w, h = self._panel()
+        frames, auto_speed = await self.hass.async_add_executor_job(
+            self._raster_gif, source, w, h, fit, chroma, tol, max_frames
+        )
+        await self._send_source(
+            w, h, frames, effects=effect, speed=speed if speed is not None else auto_speed,
+            gif=True, stay=stay,
+        )
 
     def device_info(self, unique_id: str) -> DeviceInfo:
         w, h = self._eff_size()

@@ -23,10 +23,7 @@ send_raw:
 
 display_text:
   name: Display text
-  description: >-
-    Rasterize text and send it to the panel as pixels (bulk transfer).
-    Experimental — the bulk wire format is reverse-engineered but not yet
-    verified on hardware.
+  description: Rasterize text and send it to the panel.
   fields:
     text:
       name: Text
@@ -43,33 +40,50 @@ display_text:
         color_rgb:
     effect:
       name: Effect
-      description: Effect/scroll mode byte (device-specific; 0 = static).
+      description: >-
+        0 static, 1 scroll left, 2 right, 3 up, 4 down, 5 snowflake, 6 scroll,
+        7 laser.
       default: 0
+      selector:
+        number:
+          min: 0
+          max: 7
+          mode: box
+    speed:
+      name: Speed
+      description: Scroll/animation speed (lower is slower).
+      default: 1
       selector:
         number:
           min: 0
           max: 255
           mode: box
-    speed:
-      name: Speed
-      description: Scroll/animation speed byte.
-      default: 50
+    dwell:
+      name: Dwell
+      description: >-
+        Hold time between pages, only visible when the text spans more than one
+        screen (paged effects). 0 = no pause.
+      default: 30
       selector:
         number:
-          min: 1
+          min: 0
           max: 255
           mode: box
 
 display_image:
   name: Display image
   description: >-
-    Load an image (local path or http(s) URL), fit it to the panel, and send it
-    as pixels (bulk transfer). Experimental — unverified on hardware.
+    Send an image to the panel. Either upload a file or give a local path / URL.
   fields:
+    file:
+      name: Upload
+      description: Upload an image file directly from your device.
+      selector:
+        file:
+          accept: ".png,.jpg,.jpeg,.bmp,.webp,.gif"
     source:
-      name: Source
-      description: Local file path or http(s) URL.
-      required: true
+      name: Source path / URL
+      description: Local file path or http(s) URL (alternative to Upload).
       example: "/config/www/icon.png"
       selector:
         text:
@@ -83,24 +97,75 @@ display_image:
             - contain
             - cover
             - stretch
+    background:
+      name: Background key color
+      description: >-
+        RGB color treated as transparent (off) on the panel. Use for images with
+        a baked-in solid background, e.g. white [255, 255, 255]. Real alpha
+        transparency is handled automatically.
+      selector:
+        color_rgb:
+    tolerance:
+      name: Background tolerance
+      description: How close a pixel must be to the key color to be turned off (0-255).
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+    effect:
+      name: Effect
+      description: >-
+        0 static, 1 scroll left, 2 right, 3 up, 4 down, 5 snowflake, 6 scroll,
+        7 laser.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 7
+          mode: box
+    speed:
+      name: Speed
+      description: Scroll/animation speed (lower is slower).
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+    dwell:
+      name: Dwell
+      description: Hold time for paged effects (single images stay on one frame). 0 = no pause.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
 
 display_gif:
   name: Display GIF
   description: >-
-    Load a GIF (local path or http(s) URL) and send it. On gif-capable panels
-    the raw file is sent as-is; otherwise frames are decoded and sent as pixels.
-    Experimental — unverified on hardware.
+    Load a GIF (local path or http(s) URL), decode its frames, and send them to
+    the panel. Lower Frame hold for faster playback, or reduce Max frames to
+    shorten the loop.
   fields:
+    file:
+      name: Upload
+      description: Upload a GIF file directly from your device.
+      selector:
+        file:
+          accept: ".gif"
     source:
-      name: Source
-      description: Local file path or http(s) URL.
-      required: true
+      name: Source path / URL
+      description: Local file path or http(s) URL (alternative to Upload).
       example: "/config/www/anim.gif"
       selector:
         text:
     fit:
       name: Fit
-      description: How to fit decoded frames to the panel (ignored when the raw GIF is sent).
+      description: How to fit decoded frames to the panel.
       default: contain
       selector:
         select:
@@ -108,3 +173,102 @@ display_gif:
             - contain
             - cover
             - stretch
+    background:
+      name: Background key color
+      description: >-
+        RGB color treated as transparent (turned off) on the panel. Use for GIFs
+        with a baked-in solid background, e.g. white [255, 255, 255]. Leave unset
+        for GIFs with real alpha transparency (handled automatically).
+      selector:
+        color_rgb:
+    tolerance:
+      name: Background tolerance
+      description: How close a pixel must be to the key color to be turned off (0-255).
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+    max_frames:
+      name: Max frames
+      description: >-
+        Cap the number of frames by evenly sampling. Fewer frames = shorter,
+        faster loop. Leave unset to keep all frames.
+      selector:
+        number:
+          min: 1
+          max: 255
+          mode: box
+    frame_hold:
+      name: Frame hold
+      description: >-
+        Per-frame hold time on the panel. Lower = faster playback (1 is fastest,
+        10 is a comfortable default). The vendor app floors this at 10, but the
+        device honors lower values.
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 255
+          mode: box
+    effect:
+      name: Effect
+      description: >-
+        Overlay effect: 0 none, 1 scroll left, 2 right, 3 up, 4 down,
+        5 snowflake, 6 scroll, 7 laser.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 7
+          mode: box
+    speed:
+      name: Speed
+      description: Override playback speed byte. Leave unset to derive from the GIF timing.
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+
+display_color:
+  name: Display solid color
+  description: Fill the whole panel with a single color.
+  fields:
+    color:
+      name: Color
+      description: RGB fill color.
+      required: true
+      default: [255, 0, 0]
+      selector:
+        color_rgb:
+    effect:
+      name: Effect
+      description: >-
+        0 static, 1 scroll left, 2 right, 3 up, 4 down, 5 snowflake, 6 scroll,
+        7 laser.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 7
+          mode: box
+    speed:
+      name: Speed
+      description: Animation/scroll speed (lower is slower).
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+    dwell:
+      name: Dwell
+      description: Hold time for paged effects. 0 = no pause.
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
