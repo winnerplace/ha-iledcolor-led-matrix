@@ -36,3 +36,18 @@ INTERVAL_MIN = 30
 INTERVAL_MAX = 600
 INTERVAL_STEP = 30
 DEFAULT_INTERVAL = 60
+
+CONF_EFFECT = "effect"
+CONF_SPEED = "speed"
+CONF_DWELL = "dwell"
+
+DEFAULT_EFFECT = 0
+DEFAULT_SPEED = 1
+DEFAULT_DWELL = 30
+
+SPEED_MIN = 0
+SPEED_MAX = 255
+DWELL_MIN = 0
+DWELL_MAX = 255
+
+EFFECT_OPTIONS = ["정지", "좌 ←", "우 →", "위 ↑", "아래 ↓", "눈송이", "두루마리", "레이저"]

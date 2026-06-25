@@ -36,19 +36,18 @@
   },
   "entity": {
     "number": {
-      "update_interval": {
-        "name": "Update interval"
-      }
+      "update_interval": { "name": "Update interval" },
+      "speed": { "name": "Speed" },
+      "dwell": { "name": "Dwell" }
+    },
+    "select": {
+      "effect": { "name": "Effect" }
     },
     "switch": {
-      "status_display": {
-        "name": "Status display"
-      }
+      "status_display": { "name": "Status display" }
     },
     "text": {
-      "display_text": {
-        "name": "Display text"
-      }
+      "display_text": { "name": "Display text" }
     }
   },
   "services": {

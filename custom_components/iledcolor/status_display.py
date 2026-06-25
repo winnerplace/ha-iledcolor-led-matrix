@@ -9,7 +9,18 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 from homeassistant.helpers.event import async_track_time_interval
 
-from .const import CONF_ENABLED, CONF_ENTITIES, CONF_INTERVAL, DEFAULT_INTERVAL
+from .const import (
+    CONF_DWELL,
+    CONF_EFFECT,
+    CONF_ENABLED,
+    CONF_ENTITIES,
+    CONF_INTERVAL,
+    CONF_SPEED,
+    DEFAULT_DWELL,
+    DEFAULT_EFFECT,
+    DEFAULT_INTERVAL,
+    DEFAULT_SPEED,
+)
 from .device import IledColorDevice
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,6 +36,9 @@ class StatusDisplay:
         self.interval = DEFAULT_INTERVAL
         self.enabled = False
         self.entities: list[str] = []
+        self.effect = DEFAULT_EFFECT
+        self.speed = DEFAULT_SPEED
+        self.dwell = DEFAULT_DWELL
         self._index = 0
         self._unsub: Callable[[], None] | None = None
         self._listeners: list[Callable[[], None]] = []
@@ -45,6 +59,9 @@ class StatusDisplay:
         self.interval = int(opts.get(CONF_INTERVAL, DEFAULT_INTERVAL))
         self.enabled = bool(opts.get(CONF_ENABLED, False))
         self.entities = list(opts.get(CONF_ENTITIES, []))
+        self.effect = int(opts.get(CONF_EFFECT, DEFAULT_EFFECT))
+        self.speed = int(opts.get(CONF_SPEED, DEFAULT_SPEED))
+        self.dwell = int(opts.get(CONF_DWELL, DEFAULT_DWELL))
         if self.enabled and not self.entities:
             _LOGGER.warning(
                 "Status display is on but no entities are selected; pick them in the "
@@ -100,7 +117,9 @@ class StatusDisplay:
         text = rows[self._index]
         self._index += 1
         try:
-            await self.device.display_text(text)
+            await self.device.display_text(
+                text, effect=self.effect, speed=self.speed, dwell=self.dwell
+            )
             self._warned = False
         except Exception as err:  # noqa: BLE001
             if not self._warned:

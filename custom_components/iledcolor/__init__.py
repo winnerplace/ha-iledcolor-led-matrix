@@ -15,7 +15,7 @@ from .device import IledColorDevice
 from .protocol import Capability, find_capability_blob, parse_capability
 from .status_display import StatusDisplay
 
-PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SWITCH, Platform.TEXT]
+PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SELECT, Platform.SWITCH, Platform.TEXT]
 
 SERVICE_SEND_RAW = "send_raw"
 SERVICE_DISPLAY_TEXT = "display_text"

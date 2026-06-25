@@ -36,19 +36,18 @@
   },
   "entity": {
     "number": {
-      "update_interval": {
-        "name": "갱신 주기"
-      }
+      "update_interval": { "name": "갱신 주기" },
+      "speed": { "name": "속도" },
+      "dwell": { "name": "정지 시간" }
+    },
+    "select": {
+      "effect": { "name": "효과" }
     },
     "switch": {
-      "status_display": {
-        "name": "상태표시"
-      }
+      "status_display": { "name": "상태표시" }
     },
     "text": {
-      "display_text": {
-        "name": "텍스트 표시"
-      }
+      "display_text": { "name": "텍스트 표시" }
     }
   },
   "services": {
