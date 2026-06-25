@@ -17,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_MTU = 23
 _ACK_TIMEOUT = 2.0
+_MAX_PANEL = 1024
 RGB = tuple[int, int, int]
 
 
@@ -98,9 +99,9 @@ class IledColorDevice:
 
     def _panel(self) -> tuple[int, int]:
         w, h = self.capability.width, self.capability.height
-        if not w or not h:
+        if not (1 <= w <= _MAX_PANEL and 1 <= h <= _MAX_PANEL):
             raise RuntimeError(
-                "panel size unknown; re-add the device so its advertisement is parsed"
+                f"implausible panel size {w}x{h}; capability advertisement parse needs verification"
             )
         return w, h
 

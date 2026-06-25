@@ -9,13 +9,16 @@ Reverse-engineered from the vendor's published source
 
 [![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=winnerplace&repository=ha-iledcolor-led-matrix&category=integration)
 
-> **Status: 26.6.3 — validation build.** Power and brightness are the
-> high-confidence path. Text / image / GIF now have a full implementation built on
-> the reverse-engineered bulk wire format (0xA8,
-> `.claude/docs/analysis/iledcolor-bulk-wire-spec.md`), but **the bulk path is
-> derived from static analysis and is unverified on hardware** — treat
-> `display_*` and the Status display as experimental until confirmed on a real
-> panel (enable debug logging and watch `A953`).
+> **Status: 26.6.4 — validation build.** 26.6.4 reverts power/brightness to the
+> legacy short-frame encoding (10-byte power, `10 − level` 2-byte brightness)
+> after a field report that the 18-byte/`11 − level` "shipped app" encoding broke
+> on/off — that device is the **older protocol generation**.
+>
+> Text / image / GIF have a full implementation built on the reverse-engineered
+> bulk wire format (0xA8, `.claude/docs/analysis/iledcolor-bulk-wire-spec.md`), but
+> **the bulk path is from static analysis and unverified on hardware** — and on a
+> legacy-generation device it likely needs the `0x54 0x00` bulk framing instead of
+> 0xA8. Treat `display_*` and the Status display as experimental.
 
 Versioning: CalVer `YY.M.BUILD` (no zero-padding; build number starts at 1).
 
@@ -72,7 +75,7 @@ back what the screen does and what `A953` notifies:
 
 ```yaml
 # Developer Tools → Actions → iledcolor.send_raw
-data: "54 09 00 14 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 77"  # brightness level 5
+data: "54 09 00 04 05 00 00 66"   # brightness level 5 (legacy 2-byte)
 characteristic: write1
 ```
 
