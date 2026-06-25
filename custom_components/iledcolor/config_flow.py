@@ -21,15 +21,20 @@ from .const import (
     CONF_CAPABILITY,
     CONF_COLOR_TYPE,
     CONF_ENTITIES,
+    CONF_FONT,
     CONF_GENERATION,
     CONF_HEIGHT,
     CONF_MTU,
+    CONF_WEIGHT,
     CONF_WIDTH,
     DOMAIN,
+    FONT_DEFAULT,
     GEN_APP2024,
     GEN_LEGACY,
     MTU_MAX,
     SERVICE_UUID,
+    WEIGHT_DEFAULT,
+    WEIGHT_MAX,
 )
 from .protocol import find_capability_blob, parse_capability
 
@@ -156,6 +161,26 @@ class IledColorOptionsFlow(OptionsFlow):
                         CONF_MTU, default=opts.get(CONF_MTU, 0)
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=MTU_MAX, step=1, mode="box")
+                    ),
+                    vol.Optional(
+                        CONF_FONT, default=opts.get(CONF_FONT, FONT_DEFAULT)
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                {"value": "pretendard", "label": "Pretendard"},
+                                {"value": "unifont", "label": "GNU Unifont"},
+                                {"value": "d2coding", "label": "D2Coding"},
+                                {"value": "galmuri14", "label": "갈무리 14 (Galmuri 14)"},
+                                {"value": "cafe24ssurround", "label": "카페24 써라운드"},
+                                {"value": "cafe24ssurroundair", "label": "카페24 써라운드에어"},
+                                {"value": "mona12", "label": "Mona 12"},
+                            ]
+                        )
+                    ),
+                    vol.Optional(
+                        CONF_WEIGHT, default=opts.get(CONF_WEIGHT, WEIGHT_DEFAULT)
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=WEIGHT_MAX, step=1, mode="slider")
                     ),
                     vol.Optional(
                         CONF_COLOR_TYPE, default=opts.get(CONF_COLOR_TYPE, "auto")

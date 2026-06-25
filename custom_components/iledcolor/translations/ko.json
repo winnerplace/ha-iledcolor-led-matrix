@@ -29,6 +29,8 @@
           "panel_width": "패널 너비 (0 = 자동)",
           "panel_height": "패널 높이 (0 = 자동)",
           "mtu": "MTU 재정의 (0 = 자동, 작으면 전송 느림)",
+          "font": "폰트 (CJK/이모지)",
+          "weight": "글자 굵기 (0=보통, 1·2=굵게)",
           "color_type": "색 타입",
           "generation": "프레임 세대"
         }

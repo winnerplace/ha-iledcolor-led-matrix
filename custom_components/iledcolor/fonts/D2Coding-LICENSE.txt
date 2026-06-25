@@ -1,0 +1,6 @@
+D2Coding font
+Copyright (c) NAVER Corp. (https://github.com/naver/d2codingfont)
+
+Licensed under the SIL Open Font License, Version 1.1.
+See https://scripts.sil.org/OFL and https://github.com/naver/d2codingfont
+for the full license text.

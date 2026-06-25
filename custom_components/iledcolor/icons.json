@@ -1,0 +1,21 @@
+{
+  "entity": {
+    "text": {
+      "display_text": { "default": "mdi:format-text" }
+    },
+    "switch": {
+      "status_display": { "default": "mdi:monitor-dashboard" },
+      "flip_h": { "default": "mdi:flip-horizontal" },
+      "flip_v": { "default": "mdi:flip-vertical" }
+    },
+    "number": {
+      "update_interval": { "default": "mdi:timer-refresh" },
+      "speed": { "default": "mdi:speedometer" },
+      "dwell": { "default": "mdi:timer-sand" },
+      "mtu": { "default": "mdi:swap-horizontal" }
+    },
+    "select": {
+      "effect": { "default": "mdi:auto-fix" }
+    }
+  }
+}

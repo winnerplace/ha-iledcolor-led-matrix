@@ -29,6 +29,8 @@
           "panel_width": "Panel width (0 = auto)",
           "panel_height": "Panel height (0 = auto)",
           "mtu": "MTU override (0 = auto; small MTU = slow transfers)",
+          "font": "Font (CJK/emoji)",
+          "weight": "Font weight (0 = regular, 1-2 = bold)",
           "color_type": "Color type",
           "generation": "Frame generation"
         }

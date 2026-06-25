@@ -4,6 +4,16 @@
 
 버전 체계는 `YY.M.PATCH`이며 릴리즈마다 PATCH를 1씩 올린다. manifest `version`, git 태그, GitHub 릴리즈가 항상 동일해야 한다. 자세한 규칙은 [CLAUDE.md](CLAUDE.md) 참고.
 
+## [26.6.19] - 2026-06-26
+
+### Added
+- **폰트 선택** (구성 → 폰트): Pretendard / GNU Unifont / D2Coding / 갈무리 14 / 카페24 써라운드 / 카페24 써라운드에어 / Mona 12. 이모지는 어느 폰트든 NotoEmoji 폴백.
+- **글자 굵기** (구성, 0~2 슬라이더) — stroke 방식이라 모든 폰트에 적용.
+- 엔티티 **MDI 아이콘** (`icons.json`) — 텍스트/상태표시/효과/속도/정지/MTU/반전/갱신 주기.
+
+### Changed
+- 브랜드 아이콘 교체 (네온 스타일). repo `brands/iledcolor/` (실제 표시는 home-assistant/brands PR 필요).
+
 ## [26.6.18] - 2026-06-26
 
 ### Added

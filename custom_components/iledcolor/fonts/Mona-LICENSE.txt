@@ -1,0 +1,4 @@
+Mona font
+Copyright (c) MonadABXY (https://github.com/MonadABXY/mona-font)
+Licensed under the SIL Open Font License, Version 1.1.
+See https://scripts.sil.org/OFL

@@ -82,6 +82,25 @@ def _default_font_path() -> str | None:
     return None
 
 
+_FONTS_DIR = pathlib.Path(__file__).resolve().parent / "fonts"
+_FONT_FILES = {
+    "pretendard": _BUNDLED_FONT,
+    "unifont": _FONTS_DIR / "Unifont-Regular.otf",
+    "d2coding": _FONTS_DIR / "D2Coding-Regular.ttf",
+    "galmuri14": _FONTS_DIR / "Galmuri14.ttf",
+    "cafe24ssurround": _FONTS_DIR / "Cafe24Ssurround.ttf",
+    "cafe24ssurroundair": _FONTS_DIR / "Cafe24SsurroundAir.ttf",
+    "mona12": _FONTS_DIR / "Mona12.ttf",
+}
+
+
+def font_file(name: str | None) -> str | None:
+    path = _FONT_FILES.get(name or "")
+    if path and path.exists():
+        return str(path)
+    return _default_font_path()
+
+
 @functools.lru_cache(maxsize=64)
 def _load_font(path: str | None, size: int):
     from PIL import ImageFont
@@ -133,6 +152,7 @@ def rasterize_text(
     color: RGB = (255, 255, 255),
     bg: RGB = (0, 0, 0),
     font_path: str | None = None,
+    weight: int = 0,
 ) -> Grid:
     from PIL import Image, ImageDraw
 
@@ -142,6 +162,7 @@ def rasterize_text(
         return _to_grid(image, width, height)
 
     primary = font_path or _default_font_path()
+    pad = 2 * max(0, weight)
 
     def layout(size: int):
         fonts = [_font_for(c, size, primary) for c in chars]
@@ -155,7 +176,7 @@ def rasterize_text(
     fonts, widths, total, top, text_h = layout(size)
     for candidate in range(height, 5, -1):
         fonts, widths, total, top, text_h = layout(candidate)
-        if total <= width and text_h <= height:
+        if total + pad <= width and text_h + pad <= height:
             size = candidate
             break
 
@@ -163,7 +184,10 @@ def rasterize_text(
     x = (width - total) / 2
     y = (height - text_h) / 2 - top
     for font, ch, w in zip(fonts, chars, widths):
-        draw.text((x, y), ch, fill=color, font=font)
+        if weight > 0:
+            draw.text((x, y), ch, fill=color, font=font, stroke_width=weight, stroke_fill=color)
+        else:
+            draw.text((x, y), ch, fill=color, font=font)
         x += w
     return _to_grid(image, width, height)
 

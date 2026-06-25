@@ -20,9 +20,11 @@ from .const import (
     CONF_COLOR_TYPE,
     CONF_FLIP_H,
     CONF_FLIP_V,
+    CONF_FONT,
     CONF_GENERATION,
     CONF_HEIGHT,
     CONF_MTU,
+    CONF_WEIGHT,
     CONF_WIDTH,
     DOMAIN,
     GEN_APP2024,
@@ -234,14 +236,30 @@ class IledColorDevice:
             grid = list(reversed(grid))
         return bulk.encode_frame(grid, w, h, self._color_type())
 
+    def _font_path(self) -> str | None:
+        return render.font_file(self.entry.options.get(CONF_FONT))
+
+    def _weight(self) -> int:
+        return int(self.entry.options.get(CONF_WEIGHT, 0))
+
     def _raster_text(self, text: str, w: int, h: int, color: RGB) -> bytes:
-        return self._encode(render.rasterize_text(text, w, h, color=color), w, h)
+        grid = render.rasterize_text(
+            text, w, h, color=color, font_path=self._font_path(), weight=self._weight()
+        )
+        return self._encode(grid, w, h)
 
     def _raster_fill(self, color: RGB, w: int, h: int) -> bytes:
         return self._encode([[color for _ in range(w)] for _ in range(h)], w, h)
 
     def _raster_texts(self, texts: list[str], w: int, h: int, color: RGB) -> list[bytes]:
-        return [self._encode(render.rasterize_text(t, w, h, color=color), w, h) for t in texts]
+        font = self._font_path()
+        weight = self._weight()
+        return [
+            self._encode(
+                render.rasterize_text(t, w, h, color=color, font_path=font, weight=weight), w, h
+            )
+            for t in texts
+        ]
 
     def _raster_image(
         self, source: str | bytes, w: int, h: int, fit: str, chroma: RGB | None, tol: int

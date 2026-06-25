@@ -31,6 +31,22 @@ CONF_GENERATION = "generation"
 CONF_MTU = "mtu"
 MTU_MAX = 517
 
+CONF_FONT = "font"
+FONT_DEFAULT = "pretendard"
+FONT_OPTIONS = [
+    "pretendard",
+    "unifont",
+    "d2coding",
+    "galmuri14",
+    "cafe24ssurround",
+    "cafe24ssurroundair",
+    "mona12",
+]
+
+CONF_WEIGHT = "weight"
+WEIGHT_DEFAULT = 0
+WEIGHT_MAX = 2
+
 GEN_LEGACY = "legacy"
 GEN_APP2024 = "app2024"
 
