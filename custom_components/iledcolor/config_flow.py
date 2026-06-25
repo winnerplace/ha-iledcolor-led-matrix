@@ -23,10 +23,12 @@ from .const import (
     CONF_ENTITIES,
     CONF_GENERATION,
     CONF_HEIGHT,
+    CONF_MTU,
     CONF_WIDTH,
     DOMAIN,
     GEN_APP2024,
     GEN_LEGACY,
+    MTU_MAX,
     SERVICE_UUID,
 )
 from .protocol import find_capability_blob, parse_capability
@@ -148,6 +150,11 @@ class IledColorOptionsFlow(OptionsFlow):
                         CONF_HEIGHT, default=opts.get(CONF_HEIGHT, 0)
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=1024, step=1, mode="box")
+                    ),
+                    vol.Optional(
+                        CONF_MTU, default=opts.get(CONF_MTU, 0)
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=MTU_MAX, step=1, mode="box")
                     ),
                     vol.Optional(
                         CONF_COLOR_TYPE, default=opts.get(CONF_COLOR_TYPE, "auto")

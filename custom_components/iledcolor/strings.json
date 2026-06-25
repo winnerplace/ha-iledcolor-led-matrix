@@ -28,6 +28,7 @@
           "entities": "Entities to display",
           "panel_width": "Panel width (0 = auto)",
           "panel_height": "Panel height (0 = auto)",
+          "mtu": "MTU override (0 = auto; small MTU = slow transfers)",
           "color_type": "Color type",
           "generation": "Frame generation"
         }

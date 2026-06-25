@@ -22,6 +22,7 @@ from .const import (
     CONF_FLIP_V,
     CONF_GENERATION,
     CONF_HEIGHT,
+    CONF_MTU,
     CONF_WIDTH,
     DOMAIN,
     GEN_APP2024,
@@ -192,7 +193,11 @@ class IledColorDevice:
         async with self._lock:
             await self._ensure()
             assert self._client is not None
-            mtu = getattr(self._client, "mtu_size", 0) or _DEFAULT_MTU
+            mtu = (
+                int(self.entry.options.get(CONF_MTU) or 0)
+                or getattr(self._client, "mtu_size", 0)
+                or _DEFAULT_MTU
+            )
             t0 = time.monotonic()
             if self._app2024():
                 item = bulk.item_data(0, 0, width, height, frames, effect=effects, speed=speed)

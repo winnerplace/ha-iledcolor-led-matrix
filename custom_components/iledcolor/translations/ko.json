@@ -28,6 +28,7 @@
           "entities": "표시할 엔티티",
           "panel_width": "패널 너비 (0 = 자동)",
           "panel_height": "패널 높이 (0 = 자동)",
+          "mtu": "MTU 재정의 (0 = 자동, 작으면 전송 느림)",
           "color_type": "색 타입",
           "generation": "프레임 세대"
         }

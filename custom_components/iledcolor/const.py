@@ -28,6 +28,8 @@ CONF_WIDTH = "panel_width"
 CONF_HEIGHT = "panel_height"
 CONF_COLOR_TYPE = "color_type"
 CONF_GENERATION = "generation"
+CONF_MTU = "mtu"
+MTU_MAX = 517
 
 GEN_LEGACY = "legacy"
 GEN_APP2024 = "app2024"
