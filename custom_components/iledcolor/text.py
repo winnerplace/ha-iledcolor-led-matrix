@@ -37,6 +37,7 @@ class IledColorTextEntity(TextEntity):
     async def async_set_value(self, value: str) -> None:
         await self._device.display_text(
             value,
+            color=self._coordinator.text_color(),
             effect=self._coordinator.effect,
             speed=self._coordinator.speed,
             dwell=self._coordinator.dwell,

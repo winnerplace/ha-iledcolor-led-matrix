@@ -8,7 +8,7 @@ from homeassistant.const import CONF_ADDRESS, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_ENABLED, CONF_FLIP_H, CONF_FLIP_V, DOMAIN
+from .const import CONF_COLOR_RANDOM, CONF_ENABLED, CONF_FLIP_H, CONF_FLIP_V, DOMAIN
 from .device import IledColorDevice
 from .status_display import StatusDisplay
 
@@ -21,8 +21,9 @@ async def async_setup_entry(
     async_add_entities(
         [
             IledColorStatusSwitch(entry, device, coord),
-            IledColorFlipSwitch(entry, device, coord, "flip_h", CONF_FLIP_H),
-            IledColorFlipSwitch(entry, device, coord, "flip_v", CONF_FLIP_V),
+            IledColorOptionSwitch(entry, device, coord, "flip_h", CONF_FLIP_H),
+            IledColorOptionSwitch(entry, device, coord, "flip_v", CONF_FLIP_V),
+            IledColorOptionSwitch(entry, device, coord, "color_random", CONF_COLOR_RANDOM),
         ]
     )
 
@@ -52,7 +53,7 @@ class IledColorStatusSwitch(SwitchEntity):
         self.async_on_remove(self._coordinator.add_listener(self.async_write_ha_state))
 
 
-class IledColorFlipSwitch(SwitchEntity):
+class IledColorOptionSwitch(SwitchEntity):
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
 

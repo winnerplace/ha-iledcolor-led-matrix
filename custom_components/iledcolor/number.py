@@ -8,9 +8,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     CONF_DWELL,
+    CONF_HEIGHT,
     CONF_INTERVAL,
     CONF_MTU,
     CONF_SPEED,
+    CONF_WEIGHT,
+    CONF_WIDTH,
     DOMAIN,
     DWELL_MAX,
     DWELL_MIN,
@@ -18,8 +21,10 @@ from .const import (
     INTERVAL_MIN,
     INTERVAL_STEP,
     MTU_MAX,
+    PANEL_MAX,
     SPEED_MAX,
     SPEED_MIN,
+    WEIGHT_MAX,
 )
 from .device import IledColorDevice
 from .status_display import StatusDisplay
@@ -36,6 +41,15 @@ async def async_setup_entry(
             IledColorSettingNumber(entry, device, coord, "speed", CONF_SPEED, SPEED_MIN, SPEED_MAX),
             IledColorSettingNumber(entry, device, coord, "dwell", CONF_DWELL, DWELL_MIN, DWELL_MAX),
             IledColorSettingNumber(entry, device, coord, "mtu", CONF_MTU, 0, MTU_MAX),
+            IledColorOptionNumber(
+                entry, device, coord, "panel_width", CONF_WIDTH, 0, PANEL_MAX, NumberMode.BOX
+            ),
+            IledColorOptionNumber(
+                entry, device, coord, "panel_height", CONF_HEIGHT, 0, PANEL_MAX, NumberMode.BOX
+            ),
+            IledColorOptionNumber(
+                entry, device, coord, "weight", CONF_WEIGHT, 0, WEIGHT_MAX, NumberMode.SLIDER
+            ),
         ]
     )
 
@@ -96,6 +110,44 @@ class IledColorSettingNumber(NumberEntity):
     @property
     def native_value(self) -> float:
         return float(getattr(self._coordinator, self._key))
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self._coordinator.async_set(**{self._conf_key: int(value)})
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self._coordinator.add_listener(self.async_write_ha_state))
+
+
+class IledColorOptionNumber(NumberEntity):
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_native_step = 1
+
+    def __init__(
+        self,
+        entry: ConfigEntry,
+        device: IledColorDevice,
+        coordinator: StatusDisplay,
+        key: str,
+        conf_key: str,
+        minimum: int,
+        maximum: int,
+        mode: NumberMode,
+    ) -> None:
+        self._entry = entry
+        self._coordinator = coordinator
+        self._conf_key = conf_key
+        self._attr_translation_key = key
+        self._attr_native_min_value = minimum
+        self._attr_native_max_value = maximum
+        self._attr_mode = mode
+        base = entry.unique_id or entry.data[CONF_ADDRESS]
+        self._attr_unique_id = f"{base}_{key}"
+        self._attr_device_info = device.device_info(base)
+
+    @property
+    def native_value(self) -> float:
+        return float(self._entry.options.get(self._conf_key, 0))
 
     async def async_set_native_value(self, value: float) -> None:
         await self._coordinator.async_set(**{self._conf_key: int(value)})

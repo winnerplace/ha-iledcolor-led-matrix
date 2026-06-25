@@ -30,6 +30,15 @@ CONF_COLOR_TYPE = "color_type"
 CONF_GENERATION = "generation"
 CONF_MTU = "mtu"
 MTU_MAX = 517
+PANEL_MAX = 1024
+
+COLOR_TYPE_DEFAULT = "auto"
+COLOR_TYPE_OPTIONS = ["auto", "mono", "full"]
+
+CONF_COLOR = "color"
+CONF_COLOR_ON = "color_on"
+CONF_COLOR_RANDOM = "color_random"
+COLOR_DEFAULT = (255, 255, 255)
 
 CONF_FONT = "font"
 FONT_DEFAULT = "pretendard"
@@ -49,6 +58,8 @@ WEIGHT_MAX = 2
 
 GEN_LEGACY = "legacy"
 GEN_APP2024 = "app2024"
+GEN_DEFAULT = GEN_LEGACY
+GEN_OPTIONS = [GEN_LEGACY, GEN_APP2024]
 
 INTERVAL_MIN = 30
 INTERVAL_MAX = 600

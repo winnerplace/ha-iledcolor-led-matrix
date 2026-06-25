@@ -1,21 +1,31 @@
 {
   "entity": {
+    "light": {
+      "text_color": { "default": "mdi:palette" }
+    },
     "text": {
       "display_text": { "default": "mdi:format-text" }
     },
     "switch": {
       "status_display": { "default": "mdi:monitor-dashboard" },
       "flip_h": { "default": "mdi:flip-horizontal" },
-      "flip_v": { "default": "mdi:flip-vertical" }
+      "flip_v": { "default": "mdi:flip-vertical" },
+      "color_random": { "default": "mdi:dice-multiple" }
     },
     "number": {
       "update_interval": { "default": "mdi:timer-refresh" },
       "speed": { "default": "mdi:speedometer" },
       "dwell": { "default": "mdi:timer-sand" },
-      "mtu": { "default": "mdi:swap-horizontal" }
+      "mtu": { "default": "mdi:swap-horizontal" },
+      "panel_width": { "default": "mdi:arrow-expand-horizontal" },
+      "panel_height": { "default": "mdi:arrow-expand-vertical" },
+      "weight": { "default": "mdi:format-bold" }
     },
     "select": {
-      "effect": { "default": "mdi:auto-fix" }
+      "effect": { "default": "mdi:auto-fix" },
+      "font": { "default": "mdi:format-font" },
+      "color_type": { "default": "mdi:palette-swatch" },
+      "generation": { "default": "mdi:chip" }
     }
   }
 }

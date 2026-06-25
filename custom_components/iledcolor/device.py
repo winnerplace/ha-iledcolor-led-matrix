@@ -251,14 +251,20 @@ class IledColorDevice:
     def _raster_fill(self, color: RGB, w: int, h: int) -> bytes:
         return self._encode([[color for _ in range(w)] for _ in range(h)], w, h)
 
-    def _raster_texts(self, texts: list[str], w: int, h: int, color: RGB) -> list[bytes]:
+    def _raster_texts(
+        self, texts: list[str], w: int, h: int, color: RGB, colors: list[RGB] | None = None
+    ) -> list[bytes]:
         font = self._font_path()
         weight = self._weight()
         return [
             self._encode(
-                render.rasterize_text(t, w, h, color=color, font_path=font, weight=weight), w, h
+                render.rasterize_text(
+                    t, w, h, color=(colors[i] if colors else color), font_path=font, weight=weight
+                ),
+                w,
+                h,
             )
-            for t in texts
+            for i, t in enumerate(texts)
         ]
 
     def _raster_image(
@@ -300,6 +306,7 @@ class IledColorDevice:
         rows: list[str],
         *,
         color: RGB = (255, 255, 255),
+        colors: list[RGB] | None = None,
         effect: int = 0,
         speed: int = 1,
         dwell: int = 30,
@@ -307,7 +314,9 @@ class IledColorDevice:
         if not rows:
             return
         w, h = self._panel()
-        frames = await self.hass.async_add_executor_job(self._raster_texts, rows, w, h, color)
+        frames = await self.hass.async_add_executor_job(
+            self._raster_texts, rows, w, h, color, colors
+        )
         await self._send_source(
             w, h, frames, effects=effect, speed=speed, gif=len(frames) > 1, stay=dwell
         )

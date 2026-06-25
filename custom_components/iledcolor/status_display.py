@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import colorsys
 import logging
+import random
 from collections.abc import Callable
 from datetime import datetime, timedelta
 
@@ -10,6 +12,10 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
+    COLOR_DEFAULT,
+    CONF_COLOR,
+    CONF_COLOR_ON,
+    CONF_COLOR_RANDOM,
     CONF_DWELL,
     CONF_EFFECT,
     CONF_ENABLED,
@@ -23,6 +29,13 @@ from .const import (
     DEFAULT_SPEED,
 )
 from .device import IledColorDevice
+
+RGB = tuple[int, int, int]
+
+
+def _random_color() -> RGB:
+    r, g, b = colorsys.hsv_to_rgb(random.random(), 1.0, 1.0)
+    return (round(r * 255), round(g * 255), round(b * 255))
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +54,9 @@ class StatusDisplay:
         self.speed = DEFAULT_SPEED
         self.dwell = DEFAULT_DWELL
         self.mtu = 0
+        self.color: RGB = COLOR_DEFAULT
+        self.color_on = False
+        self.color_random = False
         self._index = 0
         self._unsub: Callable[[], None] | None = None
         self._listeners: list[Callable[[], None]] = []
@@ -65,6 +81,9 @@ class StatusDisplay:
         self.speed = int(opts.get(CONF_SPEED, DEFAULT_SPEED))
         self.dwell = int(opts.get(CONF_DWELL, DEFAULT_DWELL))
         self.mtu = int(opts.get(CONF_MTU, 0))
+        self.color = tuple(opts.get(CONF_COLOR, COLOR_DEFAULT))  # type: ignore[assignment]
+        self.color_on = bool(opts.get(CONF_COLOR_ON, False))
+        self.color_random = bool(opts.get(CONF_COLOR_RANDOM, False))
         if self.enabled and not self.entities:
             _LOGGER.warning(
                 "Status display is on but no entities are selected; pick them in the "
@@ -126,13 +145,27 @@ class StatusDisplay:
         area = ar.async_get(self.hass).async_get_area(area_id)
         return area.name if area else ""
 
+    def text_color(self) -> RGB:
+        if self.color_random:
+            return _random_color()
+        return self.color if self.color_on else COLOR_DEFAULT
+
+    def colors_for(self, count: int) -> list[RGB]:
+        if self.color_random:
+            return [_random_color() for _ in range(count)]
+        return [self.color if self.color_on else COLOR_DEFAULT] * count
+
     async def _tick(self, _now: datetime | None = None) -> None:
         rows = self._rows()
         if not rows:
             return
         try:
             await self.device.display_status(
-                rows, effect=self.effect, speed=self.speed, dwell=self.dwell
+                rows,
+                colors=self.colors_for(len(rows)),
+                effect=self.effect,
+                speed=self.speed,
+                dwell=self.dwell,
             )
             self._warned = False
         except Exception as err:  # noqa: BLE001

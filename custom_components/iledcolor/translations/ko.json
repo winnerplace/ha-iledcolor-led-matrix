@@ -22,35 +22,55 @@
   "options": {
     "step": {
       "init": {
-        "title": "상태표시 & 패널",
-        "description": "매트릭스에 순환 표시할 엔티티를 고르세요. 자동 감지가 틀리면 패널 크기 / 색 타입 / 프레임 세대를 덮어쓸 수 있습니다 (0 = 자동).",
+        "title": "상태표시",
+        "description": "매트릭스에 순환 표시할 엔티티를 고르세요. 패널 크기 / 폰트 / 색 타입 / 프레임 세대 등은 기기 설정에서 조절합니다.",
         "data": {
-          "entities": "표시할 엔티티",
-          "panel_width": "패널 너비 (0 = 자동)",
-          "panel_height": "패널 높이 (0 = 자동)",
-          "mtu": "MTU 재정의 (0 = 자동, 작으면 전송 느림)",
-          "font": "폰트 (CJK/이모지)",
-          "weight": "글자 굵기 (0=보통, 1·2=굵게)",
-          "color_type": "색 타입",
-          "generation": "프레임 세대"
+          "entities": "표시할 엔티티"
         }
       }
     }
   },
   "entity": {
+    "light": {
+      "text_color": { "name": "텍스트 색상" }
+    },
     "number": {
       "update_interval": { "name": "갱신 주기" },
       "speed": { "name": "속도" },
       "dwell": { "name": "정지 시간" },
-      "mtu": { "name": "MTU (0=자동)" }
+      "mtu": { "name": "MTU (0=자동)" },
+      "panel_width": { "name": "패널 너비 (0=자동)" },
+      "panel_height": { "name": "패널 높이 (0=자동)" },
+      "weight": { "name": "글자 굵기 (0=보통, 1·2=굵게)" }
     },
     "select": {
-      "effect": { "name": "효과" }
+      "effect": { "name": "효과" },
+      "font": {
+        "name": "폰트",
+        "state": {
+          "pretendard": "Pretendard",
+          "unifont": "GNU Unifont",
+          "d2coding": "D2Coding",
+          "galmuri14": "갈무리 14",
+          "cafe24ssurround": "카페24 써라운드",
+          "cafe24ssurroundair": "카페24 써라운드에어",
+          "mona12": "Mona 12"
+        }
+      },
+      "color_type": {
+        "name": "색 타입",
+        "state": { "auto": "자동", "mono": "단색", "full": "풀컬러" }
+      },
+      "generation": {
+        "name": "프레임 세대",
+        "state": { "legacy": "레거시", "app2024": "앱2024" }
+      }
     },
     "switch": {
       "status_display": { "name": "상태표시" },
       "flip_h": { "name": "좌우 반전" },
-      "flip_v": { "name": "상하 반전" }
+      "flip_v": { "name": "상하 반전" },
+      "color_random": { "name": "랜덤 색상" }
     },
     "text": {
       "display_text": { "name": "텍스트 표시" }

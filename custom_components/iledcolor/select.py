@@ -6,7 +6,20 @@ from homeassistant.const import CONF_ADDRESS, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_EFFECT, DOMAIN, EFFECT_OPTIONS
+from .const import (
+    COLOR_TYPE_DEFAULT,
+    COLOR_TYPE_OPTIONS,
+    CONF_COLOR_TYPE,
+    CONF_EFFECT,
+    CONF_FONT,
+    CONF_GENERATION,
+    DOMAIN,
+    EFFECT_OPTIONS,
+    FONT_DEFAULT,
+    FONT_OPTIONS,
+    GEN_DEFAULT,
+    GEN_OPTIONS,
+)
 from .device import IledColorDevice
 from .status_display import StatusDisplay
 
@@ -15,7 +28,21 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     runtime = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([IledColorEffectSelect(entry, runtime["device"], runtime["coordinator"])])
+    device, coord = runtime["device"], runtime["coordinator"]
+    async_add_entities(
+        [
+            IledColorEffectSelect(entry, device, coord),
+            IledColorOptionSelect(
+                entry, device, coord, "font", CONF_FONT, FONT_OPTIONS, FONT_DEFAULT
+            ),
+            IledColorOptionSelect(
+                entry, device, coord, "color_type", CONF_COLOR_TYPE, COLOR_TYPE_OPTIONS, COLOR_TYPE_DEFAULT
+            ),
+            IledColorOptionSelect(
+                entry, device, coord, "generation", CONF_GENERATION, GEN_OPTIONS, GEN_DEFAULT
+            ),
+        ]
+    )
 
 
 class IledColorEffectSelect(SelectEntity):
@@ -41,6 +68,42 @@ class IledColorEffectSelect(SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         await self._coordinator.async_set(**{CONF_EFFECT: EFFECT_OPTIONS.index(option)})
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self._coordinator.add_listener(self.async_write_ha_state))
+
+
+class IledColorOptionSelect(SelectEntity):
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(
+        self,
+        entry: ConfigEntry,
+        device: IledColorDevice,
+        coordinator: StatusDisplay,
+        key: str,
+        conf_key: str,
+        options: list[str],
+        default: str,
+    ) -> None:
+        self._entry = entry
+        self._coordinator = coordinator
+        self._conf_key = conf_key
+        self._default = default
+        self._attr_translation_key = key
+        self._attr_options = options
+        base = entry.unique_id or entry.data[CONF_ADDRESS]
+        self._attr_unique_id = f"{base}_{key}"
+        self._attr_device_info = device.device_info(base)
+
+    @property
+    def current_option(self) -> str:
+        value = self._entry.options.get(self._conf_key, self._default)
+        return value if value in self._attr_options else self._default
+
+    async def async_select_option(self, option: str) -> None:
+        await self._coordinator.async_set(**{self._conf_key: option})
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(self._coordinator.add_listener(self.async_write_ha_state))
