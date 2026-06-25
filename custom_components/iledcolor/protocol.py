@@ -2,16 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .const import DEVICE_MARKER, FRAME_HEADER, OP_BRIGHTNESS, OP_POWER
+from .bulk import simple_frame as build_frame
+from .const import DEVICE_MARKER, OP_BRIGHTNESS, OP_POWER
 
-
-def build_frame(op: int, payload: list[int] | bytes) -> bytes:
-    body = bytes([FRAME_HEADER, op]) + (len(payload) + 2).to_bytes(2, "big") + bytes(payload)
-    return body + (sum(body) & 0xFFFF).to_bytes(2, "big")
+__all__ = ["build_frame", "power_frame", "brightness_frame", "Capability",
+           "find_capability_blob", "parse_capability"]
 
 
 def power_frame(on: bool) -> bytes:
-    return build_frame(OP_POWER, [1 if on else 0] + [0] * 9)
+    return build_frame(OP_POWER, [1 if on else 0] + [0] * 17)
 
 
 def brightness_frame(level: int) -> bytes:

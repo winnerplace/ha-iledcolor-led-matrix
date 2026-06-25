@@ -9,16 +9,13 @@ Reverse-engineered from the vendor's published source
 
 [![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=winnerplace&repository=ha-iledcolor-led-matrix&category=integration)
 
-> **Status: 26.6.2 — validation build.** Power and brightness only. The frames
-> are derived statically; confirm against your device before relying on it. Text /
-> image / GIF (bulk transfer) are not implemented yet — the bulk wire format (0xA8)
-> is now reverse-engineered (`.claude/docs/analysis/iledcolor-bulk-wire-spec.md`)
-> but unverified on hardware.
->
-> 26.6.2 corrects the brightness frame to the shipped app's encoding
-> (`11 − level`, 18-byte payload) — **this is the change to validate**. An auto
-> "Status display" (number + switch entities to rotate sensor values) is scaffolded
-> but does not render to the panel yet (pending the bulk path).
+> **Status: 26.6.3 — validation build.** Power and brightness are the
+> high-confidence path. Text / image / GIF now have a full implementation built on
+> the reverse-engineered bulk wire format (0xA8,
+> `.claude/docs/analysis/iledcolor-bulk-wire-spec.md`), but **the bulk path is
+> derived from static analysis and is unverified on hardware** — treat
+> `display_*` and the Status display as experimental until confirmed on a real
+> panel (enable debug logging and watch `A953`).
 
 Versioning: CalVer `YY.M.BUILD` (no zero-padding; build number starts at 1).
 
@@ -49,6 +46,15 @@ Or manually:
 - `iledcolor.send_raw` service: write arbitrary bytes to `write1` (A951) or
   `write2` (A952) for protocol experimentation. Notifications from the device are
   logged at debug level.
+
+Experimental (bulk path, unverified on hardware):
+
+- `iledcolor.display_text` — rasterize text and send it as pixels.
+- `iledcolor.display_image` / `iledcolor.display_gif` — fit a local file or URL to
+  the panel and send it.
+- **Status display**: a `number` (update interval, 30–600 s slider) + `switch`
+  pair, plus an options flow to pick sensor entities, that rotates their values
+  onto the panel via `display_text`.
 
 Enable debug logging to watch the wire:
 

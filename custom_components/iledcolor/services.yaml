@@ -20,3 +20,91 @@ send_raw:
           options:
             - write1
             - write2
+
+display_text:
+  name: Display text
+  description: >-
+    Rasterize text and send it to the panel as pixels (bulk transfer).
+    Experimental — the bulk wire format is reverse-engineered but not yet
+    verified on hardware.
+  fields:
+    text:
+      name: Text
+      description: Text to show.
+      required: true
+      example: "Hello"
+      selector:
+        text:
+    color:
+      name: Color
+      description: RGB color (full-color panels only).
+      default: [255, 255, 255]
+      selector:
+        color_rgb:
+    effect:
+      name: Effect
+      description: Effect/scroll mode byte (device-specific; 0 = static).
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 255
+          mode: box
+    speed:
+      name: Speed
+      description: Scroll/animation speed byte.
+      default: 50
+      selector:
+        number:
+          min: 1
+          max: 255
+          mode: box
+
+display_image:
+  name: Display image
+  description: >-
+    Load an image (local path or http(s) URL), fit it to the panel, and send it
+    as pixels (bulk transfer). Experimental — unverified on hardware.
+  fields:
+    source:
+      name: Source
+      description: Local file path or http(s) URL.
+      required: true
+      example: "/config/www/icon.png"
+      selector:
+        text:
+    fit:
+      name: Fit
+      description: How to fit the image to the panel.
+      default: contain
+      selector:
+        select:
+          options:
+            - contain
+            - cover
+            - stretch
+
+display_gif:
+  name: Display GIF
+  description: >-
+    Load a GIF (local path or http(s) URL) and send it. On gif-capable panels
+    the raw file is sent as-is; otherwise frames are decoded and sent as pixels.
+    Experimental — unverified on hardware.
+  fields:
+    source:
+      name: Source
+      description: Local file path or http(s) URL.
+      required: true
+      example: "/config/www/anim.gif"
+      selector:
+        text:
+    fit:
+      name: Fit
+      description: How to fit decoded frames to the panel (ignored when the raw GIF is sent).
+      default: contain
+      selector:
+        select:
+          options:
+            - contain
+            - cover
+            - stretch

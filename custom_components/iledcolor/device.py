@@ -9,10 +9,22 @@ from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 
-from .const import CHAR_NOTIFY, CHAR_WRITE1, DOMAIN
+from . import bulk, render
+from .const import CHAR_NOTIFY, CHAR_WRITE1, CHAR_WRITE2, DOMAIN
 from .protocol import Capability, brightness_frame, build_frame, power_frame
 
 _LOGGER = logging.getLogger(__name__)
+
+_DEFAULT_MTU = 23
+_ACK_TIMEOUT = 2.0
+RGB = tuple[int, int, int]
+
+
+def gif_speed(delays_ms: list[int]) -> int:
+    if not delays_ms:
+        return 1
+    total = sum(min(round(d / 10), 4) * 10 for d in delays_ms)
+    return max(1, min(80, int(total / len(delays_ms) / 20.0)))
 
 
 class IledColorDevice:
@@ -24,6 +36,7 @@ class IledColorDevice:
         self._client: BleakClientWithServiceCache | None = None
         self._lock = asyncio.Lock()
         self._listeners: list[Callable[[bytes], None]] = []
+        self._ack = asyncio.Event()
 
     @property
     def connected(self) -> bool:
@@ -37,6 +50,8 @@ class IledColorDevice:
     def _on_notify(self, _char, data: bytearray) -> None:
         self.last_notify = bytes(data)
         _LOGGER.debug("%s notify <- %s", self.address, self.last_notify.hex())
+        if data and data[0] == bulk.BULK_MARKER:
+            self._ack.set()
         for cb in list(self._listeners):
             cb(self.last_notify)
 
@@ -81,8 +96,69 @@ class IledColorDevice:
     async def set_brightness_level(self, level: int) -> None:
         await self._write(CHAR_WRITE1, brightness_frame(level))
 
-    async def display_text(self, text: str) -> None:
-        raise NotImplementedError("display_text pending 0xA8 bulk wire protocol")
+    def _panel(self) -> tuple[int, int]:
+        w, h = self.capability.width, self.capability.height
+        if not w or not h:
+            raise RuntimeError(
+                "panel size unknown; re-add the device so its advertisement is parsed"
+            )
+        return w, h
+
+    async def _send_resource(self, items: list[bytes]) -> None:
+        frame = bulk.program_frame(items)
+        async with self._lock:
+            await self._ensure()
+            assert self._client is not None
+            mtu = getattr(self._client, "mtu_size", 0) or _DEFAULT_MTU
+            chunks = bulk.bulk_frames(frame, mtu)
+            _LOGGER.debug(
+                "%s bulk send: %d bytes, %d chunks, mtu=%d",
+                self.address,
+                len(frame),
+                len(chunks),
+                mtu,
+            )
+            for chunk in chunks:
+                self._ack.clear()
+                await self._client.write_gatt_char(CHAR_WRITE2, chunk, response=False)
+                try:
+                    await asyncio.wait_for(self._ack.wait(), timeout=_ACK_TIMEOUT)
+                except asyncio.TimeoutError:
+                    _LOGGER.debug("%s bulk ack timeout, continuing", self.address)
+
+    async def display_text(
+        self, text: str, *, color: RGB = (255, 255, 255), effect: int = 0, speed: int = 50
+    ) -> None:
+        width, height = self._panel()
+        grid = render.rasterize_text(text, width, height, color=color)
+        frame = bulk.encode_frame(grid, width, height, self.capability.color_type or 3)
+        item = bulk.item_data(0, 0, width, height, [frame], effect=effect, speed=speed)
+        await self._send_resource([item])
+
+    async def display_image(self, source: str | bytes, *, fit: str = "contain") -> None:
+        width, height = self._panel()
+        grid = render.load_image(source, width, height, fit=fit)
+        frame = bulk.encode_frame(grid, width, height, self.capability.color_type or 3)
+        item = bulk.item_data(0, 0, width, height, [frame])
+        await self._send_resource([item])
+
+    async def display_gif(self, source: str | bytes, *, fit: str = "contain") -> None:
+        width, height = self._panel()
+        color_type = self.capability.color_type or 3
+        if self.capability.supports_gif:
+            raw = render.read_gif_bytes(source)
+            item = bulk.item_data(
+                0, 0, width, height, [raw], type_byte=bulk.ITEM_TYPE_GIF, speed=4
+            )
+        else:
+            frames, delays = render.load_gif(source, width, height, fit=fit)
+            speed = gif_speed(delays)
+            blocks = [
+                bulk.gif_frame_block(speed, bulk.encode_frame(f, width, height, color_type))
+                for f in frames
+            ]
+            item = bulk.item_data(0, 0, width, height, blocks, speed=max(speed, 10))
+        await self._send_resource([item])
 
     def device_info(self, unique_id: str) -> DeviceInfo:
         cap = self.capability

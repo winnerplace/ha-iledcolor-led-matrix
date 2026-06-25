@@ -80,12 +80,10 @@ class StatusDisplay:
         self._index += 1
         try:
             await self.device.display_text(text)
-        except NotImplementedError:
+        except Exception as err:  # noqa: BLE001
             if not self._warned:
                 self._warned = True
-                _LOGGER.warning(
-                    "display_text pending bulk wire protocol; would display: %s", text
-                )
+                _LOGGER.warning("%s status display send failed: %s", self.device.address, err)
 
     async def async_stop(self) -> None:
         if self._unsub is not None:

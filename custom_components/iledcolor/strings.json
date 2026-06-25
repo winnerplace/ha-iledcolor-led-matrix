@@ -56,6 +56,32 @@
           "description": "write1 (A951, commands) or write2 (A952, bulk)."
         }
       }
+    },
+    "display_text": {
+      "name": "Display text",
+      "description": "Rasterize text and send it to the panel as pixels (experimental, unverified on hardware).",
+      "fields": {
+        "text": { "name": "Text", "description": "Text to show." },
+        "color": { "name": "Color", "description": "RGB color (full-color panels only)." },
+        "effect": { "name": "Effect", "description": "Effect/scroll mode byte (0 = static)." },
+        "speed": { "name": "Speed", "description": "Scroll/animation speed byte." }
+      }
+    },
+    "display_image": {
+      "name": "Display image",
+      "description": "Load an image (path or URL), fit it to the panel, and send it as pixels (experimental).",
+      "fields": {
+        "source": { "name": "Source", "description": "Local file path or http(s) URL." },
+        "fit": { "name": "Fit", "description": "How to fit the image to the panel." }
+      }
+    },
+    "display_gif": {
+      "name": "Display GIF",
+      "description": "Load a GIF (path or URL) and send it. Raw on gif-capable panels, else decoded to pixels (experimental).",
+      "fields": {
+        "source": { "name": "Source", "description": "Local file path or http(s) URL." },
+        "fit": { "name": "Fit", "description": "How to fit decoded frames (ignored for raw GIF)." }
+      }
     }
   }
 }

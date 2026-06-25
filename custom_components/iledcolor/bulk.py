@@ -7,6 +7,13 @@ BULK_SUB_DATA = 0x00
 _BULK_END_BODY = bytes([0xA8, 0x02, 0x00, 0x06, 0x02])
 _CHUNK_OVERHEAD = 13
 
+FRAME_HEADER = 0x54
+OP_PROGRAM = 0x06
+
+ITEM_TYPE_IMAGE = 2
+ITEM_TYPE_GIF = 6
+ITEM_FIELD23_DEFAULT = 0x32
+
 MONO_MASK = (0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01)
 
 Pixel = Sequence[int]
@@ -15,6 +22,12 @@ Grid = Sequence[Sequence[Pixel]]
 
 def _be16(value: int) -> bytes:
     return (value & 0xFFFF).to_bytes(2, "big")
+
+
+def simple_frame(op: int, payload: Sequence[int] | bytes) -> bytes:
+    payload = bytes(payload)
+    body = bytes([FRAME_HEADER, op]) + _be16(len(payload) + 2) + payload
+    return body + _checksum(body)
 
 
 def _checksum(body: bytes) -> bytes:
@@ -93,3 +106,53 @@ def encode_mono(pixels: Grid, width: int, height: int) -> bytes:
     if n % 8:
         out.append(cur)
     return bytes(out)
+
+
+def encode_frame(pixels: Grid, width: int, height: int, color_type: int, lut: Sequence[int] | None = None) -> bytes:
+    if color_type in (0, 1):
+        return encode_mono(pixels, width, height)
+    return encode_full_color(pixels, width, height, lut)
+
+
+def gif_frame_block(speed: int, pixel_bytes: bytes) -> bytes:
+    return _be16(speed) + pixel_bytes
+
+
+def item_data(
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    frame_blocks: Sequence[bytes],
+    *,
+    type_byte: int = ITEM_TYPE_IMAGE,
+    effect: int = 0,
+    sub_effect: int = 0,
+    speed: int = ITEM_FIELD23_DEFAULT,
+    frame_type: int = 0,
+    extra: int = 0,
+    reserved: bytes = bytes(6),
+    trailing: bytes = b"",
+) -> bytes:
+    out = bytearray()
+    out += _be16(x) + _be16(y) + _be16(width) + _be16(height)
+    out += reserved
+    out += bytes([type_byte])
+    out += _be16(len(frame_blocks))
+    out += bytes([effect & 0xFF, sub_effect & 0xFF, speed & 0xFF, frame_type & 0xFF, extra & 0xFF])
+    out += bytes(3)
+    for block in frame_blocks:
+        out += block
+    out += trailing
+    return bytes(out)
+
+
+def program_resource(items: Sequence[bytes]) -> bytes:
+    body = bytearray([len(items), 0, 0, 0])
+    for item in items:
+        body += len(item).to_bytes(4, "big") + item
+    return crc32c(bytes(body)).to_bytes(4, "big") + bytes(body)
+
+
+def program_frame(items: Sequence[bytes]) -> bytes:
+    return simple_frame(OP_PROGRAM, program_resource(items))

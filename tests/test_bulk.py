@@ -78,6 +78,57 @@ def test_mono_column_major_threshold_and_packing():
     assert out == bytes([0x80 | 0x20 | 0x08 | 0x02])  # 0xAA
 
 
+def test_simple_frame_layout():
+    f = bulk.simple_frame(0x06, b"\x01\x02")
+    assert f[:2] == bytes([0x54, 0x06])
+    assert f[2:4] == (4).to_bytes(2, "big")  # payload(2) + 2
+    assert f[4:6] == b"\x01\x02"
+    assert f[-2:] == (sum(f[:-2]) & 0xFFFF).to_bytes(2, "big")
+
+
+def test_gif_frame_block_be16_prefix():
+    assert bulk.gif_frame_block(0x1234, b"\xAA\xBB") == bytes([0x12, 0x34, 0xAA, 0xBB])
+
+
+def test_encode_frame_dispatch():
+    px = [[(0, 0, 0), (255, 255, 255)]]
+    assert bulk.encode_frame(px, 2, 1, 3) == bulk.encode_full_color(px, 2, 1)
+    assert bulk.encode_frame(px, 2, 1, 1) == bulk.encode_mono(px, 2, 1)
+
+
+def test_item_data_layout():
+    item = bulk.item_data(0, 0, 2, 2, [b"\xAA\xBB"])
+    expected = (
+        bytes.fromhex("0000 0000 0002 0002".replace(" ", ""))  # x y w h
+        + bytes(6)  # reserved field_3b
+        + bytes([0x02])  # type
+        + (1).to_bytes(2, "big")  # frameCount
+        + bytes([0x00, 0x00, 0x32, 0x00, 0x00])  # effect/sub/speed/frametype/extra
+        + bytes(3)  # reserved
+        + b"\xAA\xBB"  # frame block
+    )
+    assert item == expected
+
+
+def test_program_resource_crc_and_framing():
+    items = [b"\x01", b"\x02\x03"]
+    res = bulk.program_resource(items)
+    body = res[4:]
+    assert res[:4] == bulk.crc32c(body).to_bytes(4, "big")
+    assert body[:4] == bytes([2, 0, 0, 0])  # partitionCount + reserved
+    assert body[4:8] == (1).to_bytes(4, "big")
+    assert body[8:9] == b"\x01"
+    assert body[9:13] == (2).to_bytes(4, "big")
+    assert body[13:15] == b"\x02\x03"
+
+
+def test_program_frame_wraps_resource():
+    item = bulk.item_data(0, 0, 1, 1, [b"\x00\x00\x00"])
+    frame = bulk.program_frame([item])
+    assert frame[:2] == bytes([0x54, 0x06])
+    assert frame[4:-2] == bulk.program_resource([item])
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:
