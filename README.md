@@ -9,16 +9,17 @@ Reverse-engineered from the vendor's published source
 
 [![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=winnerplace&repository=ha-iledcolor-led-matrix&category=integration)
 
-> **Status: 26.6.4 — validation build.** 26.6.4 reverts power/brightness to the
-> legacy short-frame encoding (10-byte power, `10 − level` 2-byte brightness)
-> after a field report that the 18-byte/`11 − level` "shipped app" encoding broke
-> on/off — that device is the **older protocol generation**.
+> **Status: 26.6.5 — validation build.** 26.6.5 fixes the advertisement parse
+> off-by-one (panels were read as e.g. `24579x4096`; now correct), keeps the legacy
+> power/brightness framing as default, and adds integration **options** to override
+> panel size / color type / frame generation when auto-detection is wrong.
 >
-> Text / image / GIF have a full implementation built on the reverse-engineered
-> bulk wire format (0xA8, `.claude/docs/analysis/iledcolor-bulk-wire-spec.md`), but
-> **the bulk path is from static analysis and unverified on hardware** — and on a
-> legacy-generation device it likely needs the `0x54 0x00` bulk framing instead of
-> 0xA8. Treat `display_*` and the Status display as experimental.
+> Power and brightness (legacy framing) are the high-confidence path. Text / image /
+> GIF use the reverse-engineered 0xA8 bulk format
+> (`.claude/docs/analysis/iledcolor-bulk-wire-spec.md`); the disassembly shows 0xA8
+> is unconditional (no legacy chunk path), but the pixel-block byte alignment is
+> **still unverified on hardware** — treat `display_*` and the Status display as
+> experimental until confirmed with a capture.
 
 Versioning: CalVer `YY.M.BUILD` (no zero-padding; build number starts at 1).
 

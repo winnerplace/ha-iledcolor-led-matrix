@@ -24,6 +24,13 @@ CONF_CAPABILITY = "capability"
 CONF_ENTITIES = "entities"
 CONF_INTERVAL = "interval"
 CONF_ENABLED = "enabled"
+CONF_WIDTH = "panel_width"
+CONF_HEIGHT = "panel_height"
+CONF_COLOR_TYPE = "color_type"
+CONF_GENERATION = "generation"
+
+GEN_LEGACY = "legacy"
+GEN_APP2024 = "app2024"
 
 INTERVAL_MIN = 30
 INTERVAL_MAX = 600

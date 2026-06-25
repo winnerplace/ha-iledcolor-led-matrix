@@ -6,11 +6,24 @@ from collections.abc import Callable
 
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 from homeassistant.components import bluetooth
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 
 from . import bulk, render
-from .const import CHAR_NOTIFY, CHAR_WRITE1, CHAR_WRITE2, DOMAIN
+from .const import (
+    CHAR_NOTIFY,
+    CHAR_WRITE1,
+    CHAR_WRITE2,
+    CONF_COLOR_TYPE,
+    CONF_GENERATION,
+    CONF_HEIGHT,
+    CONF_WIDTH,
+    DOMAIN,
+    GEN_APP2024,
+    GEN_LEGACY,
+)
 from .protocol import Capability, brightness_frame, build_frame, power_frame
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,9 +42,10 @@ def gif_speed(delays_ms: list[int]) -> int:
 
 
 class IledColorDevice:
-    def __init__(self, hass: HomeAssistant, address: str, capability: Capability) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, capability: Capability) -> None:
         self.hass = hass
-        self.address = address
+        self.entry = entry
+        self.address = entry.data[CONF_ADDRESS]
         self.capability = capability
         self.last_notify: bytes | None = None
         self._client: BleakClientWithServiceCache | None = None
@@ -42,6 +56,32 @@ class IledColorDevice:
     @property
     def connected(self) -> bool:
         return self._client is not None and self._client.is_connected
+
+    def _eff_size(self) -> tuple[int, int]:
+        opts = self.entry.options
+        return (
+            int(opts.get(CONF_WIDTH) or self.capability.width or 0),
+            int(opts.get(CONF_HEIGHT) or self.capability.height or 0),
+        )
+
+    def _color_type(self) -> int:
+        override = self.entry.options.get(CONF_COLOR_TYPE, "auto")
+        if override == "mono":
+            return 1
+        if override == "full":
+            return 3
+        return self.capability.color_type or 3
+
+    def _app2024(self) -> bool:
+        return self.entry.options.get(CONF_GENERATION, GEN_LEGACY) == GEN_APP2024
+
+    def _panel(self) -> tuple[int, int]:
+        w, h = self._eff_size()
+        if not (1 <= w <= _MAX_PANEL and 1 <= h <= _MAX_PANEL):
+            raise RuntimeError(
+                f"implausible panel size {w}x{h}; set it in the integration options"
+            )
+        return w, h
 
     def add_notify_listener(self, cb: Callable[[bytes], None]) -> Callable[[], None]:
         self._listeners.append(cb)
@@ -92,18 +132,10 @@ class IledColorDevice:
         await self._write(char, bytes(data))
 
     async def set_power(self, on: bool) -> None:
-        await self._write(CHAR_WRITE1, power_frame(on))
+        await self._write(CHAR_WRITE1, power_frame(on, app2024=self._app2024()))
 
     async def set_brightness_level(self, level: int) -> None:
-        await self._write(CHAR_WRITE1, brightness_frame(level))
-
-    def _panel(self) -> tuple[int, int]:
-        w, h = self.capability.width, self.capability.height
-        if not (1 <= w <= _MAX_PANEL and 1 <= h <= _MAX_PANEL):
-            raise RuntimeError(
-                f"implausible panel size {w}x{h}; capability advertisement parse needs verification"
-            )
-        return w, h
+        await self._write(CHAR_WRITE1, brightness_frame(level, app2024=self._app2024()))
 
     async def _send_resource(self, items: list[bytes]) -> None:
         frame = bulk.program_frame(items)
@@ -125,49 +157,55 @@ class IledColorDevice:
                 try:
                     await asyncio.wait_for(self._ack.wait(), timeout=_ACK_TIMEOUT)
                 except asyncio.TimeoutError:
+                    self._ack.clear()
                     _LOGGER.debug("%s bulk ack timeout, continuing", self.address)
+
+    def _build_text_item(self, text: str, w: int, h: int, color: RGB, effect: int, speed: int) -> bytes:
+        grid = render.rasterize_text(text, w, h, color=color)
+        frame = bulk.encode_frame(grid, w, h, self._color_type())
+        return bulk.item_data(0, 0, w, h, [frame], effect=effect, speed=speed)
+
+    def _build_image_item(self, source: str | bytes, w: int, h: int, fit: str) -> bytes:
+        grid = render.load_image(source, w, h, fit=fit)
+        frame = bulk.encode_frame(grid, w, h, self._color_type())
+        return bulk.item_data(0, 0, w, h, [frame])
+
+    def _build_gif_item(self, source: str | bytes, w: int, h: int, fit: str) -> bytes:
+        if self.capability.supports_gif:
+            raw = render.read_gif_bytes(source)
+            return bulk.item_data(0, 0, w, h, [raw], type_byte=bulk.ITEM_TYPE_GIF, speed=4)
+        color_type = self._color_type()
+        frames, delays = render.load_gif(source, w, h, fit=fit)
+        speed = gif_speed(delays)
+        blocks = [bulk.gif_frame_block(speed, bulk.encode_frame(f, w, h, color_type)) for f in frames]
+        return bulk.item_data(0, 0, w, h, blocks, speed=max(speed, 10))
 
     async def display_text(
         self, text: str, *, color: RGB = (255, 255, 255), effect: int = 0, speed: int = 50
     ) -> None:
-        width, height = self._panel()
-        grid = render.rasterize_text(text, width, height, color=color)
-        frame = bulk.encode_frame(grid, width, height, self.capability.color_type or 3)
-        item = bulk.item_data(0, 0, width, height, [frame], effect=effect, speed=speed)
+        w, h = self._panel()
+        item = await self.hass.async_add_executor_job(
+            self._build_text_item, text, w, h, color, effect, speed
+        )
         await self._send_resource([item])
 
     async def display_image(self, source: str | bytes, *, fit: str = "contain") -> None:
-        width, height = self._panel()
-        grid = render.load_image(source, width, height, fit=fit)
-        frame = bulk.encode_frame(grid, width, height, self.capability.color_type or 3)
-        item = bulk.item_data(0, 0, width, height, [frame])
+        w, h = self._panel()
+        item = await self.hass.async_add_executor_job(self._build_image_item, source, w, h, fit)
         await self._send_resource([item])
 
     async def display_gif(self, source: str | bytes, *, fit: str = "contain") -> None:
-        width, height = self._panel()
-        color_type = self.capability.color_type or 3
-        if self.capability.supports_gif:
-            raw = render.read_gif_bytes(source)
-            item = bulk.item_data(
-                0, 0, width, height, [raw], type_byte=bulk.ITEM_TYPE_GIF, speed=4
-            )
-        else:
-            frames, delays = render.load_gif(source, width, height, fit=fit)
-            speed = gif_speed(delays)
-            blocks = [
-                bulk.gif_frame_block(speed, bulk.encode_frame(f, width, height, color_type))
-                for f in frames
-            ]
-            item = bulk.item_data(0, 0, width, height, blocks, speed=max(speed, 10))
+        w, h = self._panel()
+        item = await self.hass.async_add_executor_job(self._build_gif_item, source, w, h, fit)
         await self._send_resource([item])
 
     def device_info(self, unique_id: str) -> DeviceInfo:
-        cap = self.capability
+        w, h = self._eff_size()
         return DeviceInfo(
             connections={(CONNECTION_BLUETOOTH, self.address)},
             identifiers={(DOMAIN, unique_id)},
             manufacturer="I-ledshow",
-            model=f"{cap.width}x{cap.height}" if cap.width else "LED Matrix",
+            model=f"{w}x{h}" if w else "LED Matrix",
             name="iLEDcolor",
         )
 

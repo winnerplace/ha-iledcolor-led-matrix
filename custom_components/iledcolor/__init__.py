@@ -51,7 +51,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(f"{address} not found")
 
     capability = Capability.from_dict(entry.data.get(CONF_CAPABILITY, {}))
-    device = IledColorDevice(hass, address, capability)
+    device = IledColorDevice(hass, entry, capability)
     coordinator = StatusDisplay(hass, entry, device)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "device": device,
@@ -76,8 +76,9 @@ def _devices(hass: HomeAssistant) -> list[IledColorDevice]:
 
 async def _resolve_bytes(hass: HomeAssistant, source: str) -> str | bytes:
     if source.startswith(("http://", "https://")):
-        response = await async_get_clientsession(hass).get(source)
-        return await response.read()
+        async with async_get_clientsession(hass).get(source) as response:
+            response.raise_for_status()
+            return await response.read()
     return await hass.async_add_executor_job(_read_file, source)
 
 

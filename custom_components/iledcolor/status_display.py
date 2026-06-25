@@ -80,6 +80,7 @@ class StatusDisplay:
         self._index += 1
         try:
             await self.device.display_text(text)
+            self._warned = False
         except Exception as err:  # noqa: BLE001
             if not self._warned:
                 self._warned = True

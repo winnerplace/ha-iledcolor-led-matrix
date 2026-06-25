@@ -9,12 +9,15 @@ __all__ = ["build_frame", "power_frame", "brightness_frame", "Capability",
            "find_capability_blob", "parse_capability"]
 
 
-def power_frame(on: bool) -> bytes:
-    return build_frame(OP_POWER, [1 if on else 0] + [0] * 9)
+def power_frame(on: bool, app2024: bool = False) -> bytes:
+    pad = 17 if app2024 else 9
+    return build_frame(OP_POWER, [1 if on else 0] + [0] * pad)
 
 
-def brightness_frame(level: int) -> bytes:
+def brightness_frame(level: int, app2024: bool = False) -> bytes:
     level = max(1, min(10, level))
+    if app2024:
+        return build_frame(OP_BRIGHTNESS, [11 - level] + [0] * 17)
     return build_frame(OP_BRIGHTNESS, [10 - level, 0])
 
 
@@ -81,14 +84,14 @@ def find_capability_blob(service_info) -> bytes | None:
 
 
 def parse_capability(blob: bytes | None) -> Capability | None:
-    if not blob or len(blob) < 17:
+    if not blob or len(blob) < 16:
         return None
     return Capability(
-        screen_type_id=int.from_bytes(blob[1:5], "big"),
-        height=_u16(blob, 5),
-        width=_u16(blob, 7),
-        color_type=blob[9],
-        version_code=_u16(blob, 11),
-        customer_id=_u16(blob, 13),
-        fun_code=_u16(blob, 15),
+        screen_type_id=int.from_bytes(blob[0:4], "big"),
+        height=_u16(blob, 4),
+        width=_u16(blob, 6),
+        color_type=blob[8],
+        version_code=_u16(blob, 9),
+        customer_id=_u16(blob, 11),
+        fun_code=_u16(blob, 14),
     )

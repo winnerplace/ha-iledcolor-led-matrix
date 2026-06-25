@@ -17,7 +17,18 @@ from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import CONF_CAPABILITY, CONF_ENTITIES, DOMAIN, SERVICE_UUID
+from .const import (
+    CONF_CAPABILITY,
+    CONF_COLOR_TYPE,
+    CONF_ENTITIES,
+    CONF_GENERATION,
+    CONF_HEIGHT,
+    CONF_WIDTH,
+    DOMAIN,
+    GEN_APP2024,
+    GEN_LEGACY,
+    SERVICE_UUID,
+)
 from .protocol import find_capability_blob, parse_capability
 
 
@@ -115,19 +126,39 @@ class IledColorOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         if user_input is not None:
             return self.async_create_entry(data={**self._entry.options, **user_input})
+        opts = self._entry.options
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Optional(
-                        CONF_ENTITIES,
-                        default=self._entry.options.get(CONF_ENTITIES, []),
+                        CONF_ENTITIES, default=opts.get(CONF_ENTITIES, [])
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(
                             multiple=True,
                             domain=["sensor", "binary_sensor", "weather", "climate"],
                         )
-                    )
+                    ),
+                    vol.Optional(
+                        CONF_WIDTH, default=opts.get(CONF_WIDTH, 0)
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=1024, step=1, mode="box")
+                    ),
+                    vol.Optional(
+                        CONF_HEIGHT, default=opts.get(CONF_HEIGHT, 0)
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=1024, step=1, mode="box")
+                    ),
+                    vol.Optional(
+                        CONF_COLOR_TYPE, default=opts.get(CONF_COLOR_TYPE, "auto")
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=["auto", "mono", "full"])
+                    ),
+                    vol.Optional(
+                        CONF_GENERATION, default=opts.get(CONF_GENERATION, GEN_LEGACY)
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=[GEN_LEGACY, GEN_APP2024])
+                    ),
                 }
             ),
         )

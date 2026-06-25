@@ -22,10 +22,14 @@
   "options": {
     "step": {
       "init": {
-        "title": "Status display",
-        "description": "Pick the entities to rotate on the matrix. Set the update interval and toggle the Status display switch.",
+        "title": "Status display & panel",
+        "description": "Pick the entities to rotate on the matrix. Override panel size / color type / framing generation if auto-detection is wrong (0 = auto).",
         "data": {
-          "entities": "Entities to display"
+          "entities": "Entities to display",
+          "panel_width": "Panel width (0 = auto)",
+          "panel_height": "Panel height (0 = auto)",
+          "color_type": "Color type",
+          "generation": "Frame generation"
         }
       }
     }
