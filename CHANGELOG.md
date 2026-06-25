@@ -2,7 +2,15 @@
 
 이 프로젝트의 주요 변경사항을 기록한다. 포맷은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 따른다.
 
-버전 체계는 `YY.M.PATCH`이며 릴리즈마다 PATCH를 1씩 올린다. manifest `version`, git 태그, GitHub 릴리즈가 항상 동일해야 한다. 자세한 규칙은 [AGENTS.md](AGENTS.md) 참고.
+버전 체계는 `YY.M.PATCH`이며 릴리즈마다 PATCH를 1씩 올린다. manifest `version`, git 태그, GitHub 릴리즈가 항상 동일해야 한다. 자세한 규칙은 [CLAUDE.md](CLAUDE.md) 참고.
+
+## [26.6.10] - 2026-06-26
+
+### Added
+- **Pretendard 폰트 번들** (`custom_components/iledcolor/fonts/`, OFL) — HA(리눅스 컨테이너)처럼 시스템 CJK 폰트가 없는 환경에서도 한글이 렌더된다.
+
+### Changed
+- 폰트 로드를 `lru_cache`로 캐싱 — 매 렌더마다 폰트를 11회씩 재로드하던 것을 1회로. 텍스트/상태표시 갱신 속도가 크게 개선된다.
 
 ## [26.6.9] - 2026-06-26
 

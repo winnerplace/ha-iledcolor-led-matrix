@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import functools
 import io
+import pathlib
 from collections.abc import Sequence
 
 RGB = tuple[int, int, int]
 Grid = list[list[RGB]]
+
+_BUNDLED_FONT = pathlib.Path(__file__).resolve().parent / "fonts" / "Pretendard-Regular.otf"
 
 
 def _to_grid(image, width: int, height: int) -> Grid:
@@ -68,31 +72,34 @@ _FONT_CANDIDATES = (
 def _default_font_path() -> str | None:
     import os
 
+    if _BUNDLED_FONT.exists():
+        return str(_BUNDLED_FONT)
     for path in _FONT_CANDIDATES:
         if os.path.exists(path):
             return path
     return None
 
 
-def _pick_font(text: str, width: int, height: int, font_path: str | None):
+@functools.lru_cache(maxsize=64)
+def _load_font(path: str | None, size: int):
     from PIL import ImageFont
 
+    if path:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            pass
+    return ImageFont.load_default(size=size)
+
+
+def _pick_font(text: str, width: int, height: int, font_path: str | None):
     path = font_path or _default_font_path()
-
-    def _at(size: int):
-        if path:
-            try:
-                return ImageFont.truetype(path, size)
-            except OSError:
-                pass
-        return ImageFont.load_default(size=size)
-
     for size in range(height, 5, -1):
-        font = _at(size)
+        font = _load_font(path, size)
         box = font.getbbox(text)
         if (box[2] - box[0]) <= width and (box[3] - box[1]) <= height:
             return font
-    return _at(6)
+    return _load_font(path, 6)
 
 
 def rasterize_text(

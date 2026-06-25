@@ -1,4 +1,4 @@
-# AGENTS.md
+# CLAUDE.md
 
 ## 버전 업데이트 규칙
 
