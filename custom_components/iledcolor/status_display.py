@@ -113,12 +113,9 @@ class StatusDisplay:
         rows = self._rows()
         if not rows:
             return
-        self._index %= len(rows)
-        text = rows[self._index]
-        self._index += 1
         try:
-            await self.device.display_text(
-                text, effect=self.effect, speed=self.speed, dwell=self.dwell
+            await self.device.display_status(
+                rows, effect=self.effect, speed=self.speed, dwell=self.dwell
             )
             self._warned = False
         except Exception as err:  # noqa: BLE001

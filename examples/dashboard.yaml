@@ -1,0 +1,78 @@
+# iLEDcolor 대시보드 예시
+#
+# 대시보드 → 우상단 ⋮ → "원시 구성 편집기"에 아래 카드를 붙여넣고
+# entity id / 파일 경로를 본인 것으로 바꾸세요.
+# (entity id는 기기 페이지에서 각 엔티티 클릭 → 톱니 → "설정"에서 확인)
+
+type: vertical-stack
+cards:
+  # 설정 + 텍스트 입력 (효과/속도/정지를 맞추고 텍스트만 입력하면 그 효과로 스크롤)
+  - type: entities
+    title: iLEDcolor
+    entities:
+      - entity: text.iledcolor_display_text   # 텍스트 표시
+      - entity: select.iledcolor_effect        # 효과
+      - entity: number.iledcolor_speed         # 속도
+      - entity: number.iledcolor_dwell         # 정지
+      - entity: switch.iledcolor_status_display # 상태표시
+      - entity: number.iledcolor_update_interval # 갱신 주기
+
+  # 단색 버튼 (파일 불필요 — 버튼에 가장 적합)
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: 빨강
+        icon: mdi:square
+        tap_action:
+          action: perform-action
+          perform_action: iledcolor.display_color
+          data: { color: [255, 0, 0] }
+      - type: button
+        name: 초록
+        icon: mdi:square
+        tap_action:
+          action: perform-action
+          perform_action: iledcolor.display_color
+          data: { color: [0, 255, 0] }
+      - type: button
+        name: 파랑
+        icon: mdi:square
+        tap_action:
+          action: perform-action
+          perform_action: iledcolor.display_color
+          data: { color: [0, 0, 255] }
+      - type: button
+        name: 끄기
+        icon: mdi:square-outline
+        tap_action:
+          action: perform-action
+          perform_action: iledcolor.display_color
+          data: { color: [0, 0, 0] }
+
+  # 이미지 / GIF 프리셋 버튼 (source 경로를 본인 파일로 — /config/www/ 아래에 두면 접근 가능)
+  - type: horizontal-stack
+    cards:
+      - type: button
+        name: 이미지
+        icon: mdi:image
+        tap_action:
+          action: perform-action
+          perform_action: iledcolor.display_image
+          data:
+            source: /config/www/icon.png
+            fit: contain
+      - type: button
+        name: GIF
+        icon: mdi:file-gif-box
+        tap_action:
+          action: perform-action
+          perform_action: iledcolor.display_gif
+          data:
+            source: /config/www/anim.gif
+            background: [255, 255, 255]
+            tolerance: 20
+            frame_hold: 10
+
+# 임의 파일 업로드(매번 다른 파일)는 버튼으로 불가 — 그때만
+# 개발자 도구 → 동작 → iledcolor.display_image / display_gif 의
+# "업로드" 필드를 쓰세요.

@@ -209,6 +209,13 @@ class IledColorDevice:
         grid = [[color for _ in range(w)] for _ in range(h)]
         return bulk.encode_frame(grid, w, h, self._color_type())
 
+    def _raster_texts(self, texts: list[str], w: int, h: int, color: RGB) -> list[bytes]:
+        color_type = self._color_type()
+        return [
+            bulk.encode_frame(render.rasterize_text(t, w, h, color=color), w, h, color_type)
+            for t in texts
+        ]
+
     def _raster_image(
         self, source: str | bytes, w: int, h: int, fit: str, chroma: RGB | None, tol: int
     ) -> bytes:
@@ -244,6 +251,23 @@ class IledColorDevice:
         w, h = self._panel()
         pixels = await self.hass.async_add_executor_job(self._raster_text, text, w, h, color)
         await self._send_source(w, h, [pixels], effects=effect, speed=speed, stay=dwell)
+
+    async def display_status(
+        self,
+        rows: list[str],
+        *,
+        color: RGB = (255, 255, 255),
+        effect: int = 0,
+        speed: int = 1,
+        dwell: int = 30,
+    ) -> None:
+        if not rows:
+            return
+        w, h = self._panel()
+        frames = await self.hass.async_add_executor_job(self._raster_texts, rows, w, h, color)
+        await self._send_source(
+            w, h, frames, effects=effect, speed=speed, gif=len(frames) > 1, stay=dwell
+        )
 
     async def display_color(
         self, color: RGB, *, effect: int = 0, speed: int = 1, dwell: int = 30
