@@ -9,6 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     CONF_DWELL,
     CONF_INTERVAL,
+    CONF_MTU,
     CONF_SPEED,
     DOMAIN,
     DWELL_MAX,
@@ -16,6 +17,7 @@ from .const import (
     INTERVAL_MAX,
     INTERVAL_MIN,
     INTERVAL_STEP,
+    MTU_MAX,
     SPEED_MAX,
     SPEED_MIN,
 )
@@ -33,6 +35,7 @@ async def async_setup_entry(
             IledColorIntervalNumber(entry, device, coord),
             IledColorSettingNumber(entry, device, coord, "speed", CONF_SPEED, SPEED_MIN, SPEED_MAX),
             IledColorSettingNumber(entry, device, coord, "dwell", CONF_DWELL, DWELL_MIN, DWELL_MAX),
+            IledColorSettingNumber(entry, device, coord, "mtu", CONF_MTU, 0, MTU_MAX),
         ]
     )
 
@@ -67,7 +70,7 @@ class IledColorIntervalNumber(NumberEntity):
 class IledColorSettingNumber(NumberEntity):
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
-    _attr_mode = NumberMode.BOX
+    _attr_mode = NumberMode.SLIDER
 
     def __init__(
         self,

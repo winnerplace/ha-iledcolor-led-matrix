@@ -9,6 +9,8 @@ RGB = tuple[int, int, int]
 Grid = list[list[RGB]]
 
 _BUNDLED_FONT = pathlib.Path(__file__).resolve().parent / "fonts" / "Pretendard-Regular.otf"
+_EMOJI_FONT = pathlib.Path(__file__).resolve().parent / "fonts" / "NotoEmoji-Regular.ttf"
+_ZERO_WIDTH = frozenset({0x200D, 0xFE0E, 0xFE0F})
 
 
 def _to_grid(image, width: int, height: int) -> Grid:
@@ -92,14 +94,35 @@ def _load_font(path: str | None, size: int):
     return ImageFont.load_default(size=size)
 
 
-def _pick_font(text: str, width: int, height: int, font_path: str | None):
-    path = font_path or _default_font_path()
-    for size in range(height, 5, -1):
-        font = _load_font(path, size)
-        box = font.getbbox(text)
-        if (box[2] - box[0]) <= width and (box[3] - box[1]) <= height:
-            return font
-    return _load_font(path, 6)
+def _is_emoji(ch: str) -> bool:
+    o = ord(ch)
+    return (
+        0x1F000 <= o <= 0x1FAFF
+        or 0x2600 <= o <= 0x27BF
+        or 0x2B00 <= o <= 0x2BFF
+        or 0x1F1E6 <= o <= 0x1F1FF
+        or o in (0x203C, 0x2049, 0x2122, 0x2139, 0x2194, 0x2328, 0x23CF, 0x24C2, 0x25AA, 0x25FE)
+    )
+
+
+@functools.lru_cache(maxsize=16)
+def _emoji_font(size: int):
+    from PIL import ImageFont
+
+    if not _EMOJI_FONT.exists():
+        return None
+    try:
+        return ImageFont.truetype(str(_EMOJI_FONT), size)
+    except OSError:
+        return None
+
+
+def _font_for(ch: str, size: int, primary: str | None):
+    if _is_emoji(ch):
+        emoji = _emoji_font(size)
+        if emoji is not None:
+            return emoji
+    return _load_font(primary, size)
 
 
 def rasterize_text(
@@ -114,12 +137,34 @@ def rasterize_text(
     from PIL import Image, ImageDraw
 
     image = Image.new("RGB", (width, height), bg)
+    chars = [c for c in text if ord(c) not in _ZERO_WIDTH]
+    if not chars:
+        return _to_grid(image, width, height)
+
+    primary = font_path or _default_font_path()
+
+    def layout(size: int):
+        fonts = [_font_for(c, size, primary) for c in chars]
+        widths = [f.getlength(c) for f, c in zip(fonts, chars)]
+        boxes = [f.getbbox(c) for f, c in zip(fonts, chars)]
+        top = min(b[1] for b in boxes)
+        bottom = max(b[3] for b in boxes)
+        return fonts, widths, sum(widths), top, bottom - top
+
+    size = 6
+    fonts, widths, total, top, text_h = layout(size)
+    for candidate in range(height, 5, -1):
+        fonts, widths, total, top, text_h = layout(candidate)
+        if total <= width and text_h <= height:
+            size = candidate
+            break
+
     draw = ImageDraw.Draw(image)
-    font = _pick_font(text, width, height, font_path)
-    box = font.getbbox(text)
-    tx = (width - (box[2] - box[0])) // 2 - box[0]
-    ty = (height - (box[3] - box[1])) // 2 - box[1]
-    draw.text((tx, ty), text, fill=color, font=font)
+    x = (width - total) / 2
+    y = (height - text_h) / 2 - top
+    for font, ch, w in zip(fonts, chars, widths):
+        draw.text((x, y), ch, fill=color, font=font)
+        x += w
     return _to_grid(image, width, height)
 
 

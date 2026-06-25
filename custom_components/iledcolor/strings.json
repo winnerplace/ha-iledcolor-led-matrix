@@ -39,7 +39,8 @@
     "number": {
       "update_interval": { "name": "Update interval" },
       "speed": { "name": "Speed" },
-      "dwell": { "name": "Dwell" }
+      "dwell": { "name": "Dwell" },
+      "mtu": { "name": "MTU (0 = auto)" }
     },
     "select": {
       "effect": { "name": "Effect" }

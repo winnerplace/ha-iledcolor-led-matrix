@@ -39,7 +39,8 @@
     "number": {
       "update_interval": { "name": "갱신 주기" },
       "speed": { "name": "속도" },
-      "dwell": { "name": "정지 시간" }
+      "dwell": { "name": "정지 시간" },
+      "mtu": { "name": "MTU (0=자동)" }
     },
     "select": {
       "effect": { "name": "효과" }

@@ -138,6 +138,7 @@ class IledColorOptionsFlow(OptionsFlow):
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(
                             multiple=True,
+                            reorder=True,
                             domain=["sensor", "binary_sensor", "weather", "climate"],
                         )
                     ),

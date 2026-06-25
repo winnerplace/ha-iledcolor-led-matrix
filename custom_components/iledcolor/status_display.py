@@ -15,6 +15,7 @@ from .const import (
     CONF_ENABLED,
     CONF_ENTITIES,
     CONF_INTERVAL,
+    CONF_MTU,
     CONF_SPEED,
     DEFAULT_DWELL,
     DEFAULT_EFFECT,
@@ -39,6 +40,7 @@ class StatusDisplay:
         self.effect = DEFAULT_EFFECT
         self.speed = DEFAULT_SPEED
         self.dwell = DEFAULT_DWELL
+        self.mtu = 0
         self._index = 0
         self._unsub: Callable[[], None] | None = None
         self._listeners: list[Callable[[], None]] = []
@@ -62,6 +64,7 @@ class StatusDisplay:
         self.effect = int(opts.get(CONF_EFFECT, DEFAULT_EFFECT))
         self.speed = int(opts.get(CONF_SPEED, DEFAULT_SPEED))
         self.dwell = int(opts.get(CONF_DWELL, DEFAULT_DWELL))
+        self.mtu = int(opts.get(CONF_MTU, 0))
         if self.enabled and not self.entities:
             _LOGGER.warning(
                 "Status display is on but no entities are selected; pick them in the "
@@ -91,11 +94,24 @@ class StatusDisplay:
             if state is None or str(state.state).lower() in _INVALID:
                 continue
             name = state.attributes.get("friendly_name", entity_id)
+            name = self._strip_device(entity_id, name)
             unit = state.attributes.get("unit_of_measurement", "")
             area = self._area_name(entity_id)
             parts = [p for p in (area, name, f"{state.state}{unit}") if p]
             rows.append(" ".join(parts))
         return rows
+
+    def _strip_device(self, entity_id: str, name: str) -> str:
+        entry = er.async_get(self.hass).async_get(entity_id)
+        if entry is None or entry.device_id is None:
+            return name
+        device = dr.async_get(self.hass).async_get(entry.device_id)
+        if device is None:
+            return name
+        dev_name = device.name_by_user or device.name
+        if dev_name and name.startswith(f"{dev_name} "):
+            return name[len(dev_name) + 1 :]
+        return name
 
     def _area_name(self, entity_id: str) -> str:
         entry = er.async_get(self.hass).async_get(entity_id)
