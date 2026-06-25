@@ -82,6 +82,7 @@ class StatusDisplay:
             self._unsub = async_track_time_interval(
                 self.hass, self._tick, timedelta(seconds=self.interval)
             )
+            self.hass.async_create_task(self._tick())
 
     def _rows(self) -> list[str]:
         rows: list[str] = []
