@@ -4,6 +4,15 @@
 
 버전 체계는 `YY.M.PATCH`이며 릴리즈마다 PATCH를 1씩 올린다. manifest `version`, git 태그, GitHub 릴리즈가 항상 동일해야 한다. 자세한 규칙은 [CLAUDE.md](CLAUDE.md) 참고.
 
+## [26.6.11] - 2026-06-26
+
+### Added
+- 한국어 번역(`translations/ko.json`) — `상태표시`, `갱신 주기`, `텍스트 표시`, 서비스/옵션 한글화.
+- 브랜드 아이콘(글래스 LED 매트릭스) — home-assistant/brands 제출용 `icon.png`(256), `icon@2x.png`(512).
+
+### Changed
+- 상태표시 행 포맷을 `{장소} {엔티티 이름} {값}`으로 변경 (area 레지스트리에서 장소 조회, 없으면 생략).
+
 ## [26.6.10] - 2026-06-26
 
 ### Added

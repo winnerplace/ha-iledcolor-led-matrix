@@ -1,0 +1,120 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "confirm": {
+        "title": "iLEDcolor LED Matrix",
+        "description": "{name} ({size}) 설정할까요?"
+      },
+      "user": {
+        "title": "iLEDcolor LED Matrix",
+        "description": "LED 매트릭스를 선택하세요.",
+        "data": {
+          "address": "기기"
+        }
+      }
+    },
+    "abort": {
+      "no_devices_found": "블루투스 기기를 찾지 못했습니다. 기기 전원이 켜져 있고 범위 안에 있으며 휴대폰 앱에 연결돼 있지 않은지 확인하세요.",
+      "already_configured": "이미 설정된 기기입니다."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "상태표시 & 패널",
+        "description": "매트릭스에 순환 표시할 엔티티를 고르세요. 자동 감지가 틀리면 패널 크기 / 색 타입 / 프레임 세대를 덮어쓸 수 있습니다 (0 = 자동).",
+        "data": {
+          "entities": "표시할 엔티티",
+          "panel_width": "패널 너비 (0 = 자동)",
+          "panel_height": "패널 높이 (0 = 자동)",
+          "color_type": "색 타입",
+          "generation": "프레임 세대"
+        }
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "update_interval": {
+        "name": "갱신 주기"
+      }
+    },
+    "switch": {
+      "status_display": {
+        "name": "상태표시"
+      }
+    },
+    "text": {
+      "display_text": {
+        "name": "텍스트 표시"
+      }
+    }
+  },
+  "services": {
+    "send_raw": {
+      "name": "Raw 프레임 전송",
+      "description": "프로토콜 실험용으로 기기에 원시 바이트를 씁니다.",
+      "fields": {
+        "data": {
+          "name": "데이터 (hex)",
+          "description": "16진 바이트 문자열, 예: 54 09 00 04 05 00 00 66."
+        },
+        "characteristic": {
+          "name": "Characteristic",
+          "description": "write1 (A951, 명령) 또는 write2 (A952, 벌크)."
+        }
+      }
+    },
+    "display_text": {
+      "name": "텍스트 표시",
+      "description": "텍스트를 픽셀로 변환해 패널에 보냅니다.",
+      "fields": {
+        "text": { "name": "텍스트", "description": "표시할 문구." },
+        "color": { "name": "색상", "description": "RGB 색 (풀컬러 패널만)." },
+        "effect": { "name": "효과", "description": "0 정지 / 1 좌 / 2 우 / 3 상 / 4 하 / 5 눈송이 / 6 두루마리 / 7 레이저." },
+        "speed": { "name": "속도", "description": "스크롤/애니메이션 속도 (낮을수록 느림)." },
+        "dwell": { "name": "정지 시간", "description": "여러 화면일 때 페이지 사이 정지. 0 = 무정지." }
+      }
+    },
+    "display_image": {
+      "name": "이미지 표시",
+      "description": "이미지를 업로드하거나 경로/URL로 받아 패널에 보냅니다.",
+      "fields": {
+        "file": { "name": "업로드", "description": "기기에서 이미지 파일을 직접 업로드." },
+        "source": { "name": "경로 / URL", "description": "로컬 경로 또는 http(s) URL (업로드 대신)." },
+        "fit": { "name": "맞춤", "description": "패널에 맞추는 방식." },
+        "background": { "name": "배경 키 색", "description": "꺼짐으로 처리할 배경색 (예: 흰색). 알파 투명은 자동." },
+        "tolerance": { "name": "배경 허용오차", "description": "키 색과의 허용 오차 (0-255)." },
+        "effect": { "name": "효과", "description": "0 정지 / 1 좌 / 2 우 / 3 상 / 4 하 / 5 눈송이 / 6 두루마리 / 7 레이저." },
+        "speed": { "name": "속도", "description": "스크롤/애니메이션 속도 (낮을수록 느림)." },
+        "dwell": { "name": "정지 시간", "description": "페이지 효과의 정지. 0 = 무정지." }
+      }
+    },
+    "display_gif": {
+      "name": "GIF 표시",
+      "description": "GIF를 업로드하거나 경로/URL로 받아 프레임을 패널에 보냅니다.",
+      "fields": {
+        "file": { "name": "업로드", "description": "기기에서 GIF 파일을 직접 업로드." },
+        "source": { "name": "경로 / URL", "description": "로컬 경로 또는 http(s) URL (업로드 대신)." },
+        "fit": { "name": "맞춤", "description": "디코드한 프레임을 패널에 맞추는 방식." },
+        "background": { "name": "배경 키 색", "description": "꺼짐으로 처리할 배경색 (예: 흰색). 알파 투명은 자동." },
+        "tolerance": { "name": "배경 허용오차", "description": "키 색과의 허용 오차 (0-255)." },
+        "max_frames": { "name": "최대 프레임", "description": "균등 샘플링으로 프레임 수 제한. 적을수록 루프가 짧고 빠름." },
+        "frame_hold": { "name": "프레임 유지", "description": "프레임당 유지 시간. 낮을수록 빠름 (1이 최速)." },
+        "effect": { "name": "효과", "description": "0 정지 / 1 좌 / 2 우 / 3 상 / 4 하 / 5 눈송이 / 6 두루마리 / 7 레이저." },
+        "speed": { "name": "속도", "description": "재생 속도 바이트 덮어쓰기. 비우면 GIF 타이밍에서 산출." }
+      }
+    },
+    "display_color": {
+      "name": "단색 표시",
+      "description": "패널 전체를 한 색으로 채웁니다.",
+      "fields": {
+        "color": { "name": "색상", "description": "RGB 채우기 색." },
+        "effect": { "name": "효과", "description": "0 정지 / 1 좌 / 2 우 / 3 상 / 4 하 / 5 눈송이 / 6 두루마리 / 7 레이저." },
+        "speed": { "name": "속도", "description": "스크롤/애니메이션 속도 (낮을수록 느림)." },
+        "dwell": { "name": "정지 시간", "description": "페이지 효과의 정지. 0 = 무정지." }
+      }
+    }
+  }
+}

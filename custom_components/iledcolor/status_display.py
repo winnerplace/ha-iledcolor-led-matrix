@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import CONF_ENABLED, CONF_ENTITIES, CONF_INTERVAL, DEFAULT_INTERVAL
@@ -73,8 +74,23 @@ class StatusDisplay:
                 continue
             name = state.attributes.get("friendly_name", entity_id)
             unit = state.attributes.get("unit_of_measurement", "")
-            rows.append(f"{name} {state.state}{unit}")
+            area = self._area_name(entity_id)
+            parts = [p for p in (area, name, f"{state.state}{unit}") if p]
+            rows.append(" ".join(parts))
         return rows
+
+    def _area_name(self, entity_id: str) -> str:
+        entry = er.async_get(self.hass).async_get(entity_id)
+        if entry is None:
+            return ""
+        area_id = entry.area_id
+        if area_id is None and entry.device_id:
+            device = dr.async_get(self.hass).async_get(entry.device_id)
+            area_id = device.area_id if device else None
+        if area_id is None:
+            return ""
+        area = ar.async_get(self.hass).async_get_area(area_id)
+        return area.name if area else ""
 
     async def _tick(self, _now: datetime | None = None) -> None:
         rows = self._rows()
