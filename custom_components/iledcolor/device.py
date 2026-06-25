@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Callable
 
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
@@ -105,7 +106,8 @@ class IledColorDevice:
 
     @callback
     def _on_disconnect(self, _client) -> None:
-        _LOGGER.debug("%s disconnected", self.address)
+        _LOGGER.info("%s disconnected", self.address)
+        self._client = None
 
     async def _ensure(self) -> None:
         if self.connected:
@@ -113,6 +115,7 @@ class IledColorDevice:
         ble_device = bluetooth.async_ble_device_from_address(self.hass, self.address, connectable=True)
         if ble_device is None:
             raise RuntimeError(f"{self.address} not in range")
+        t0 = time.monotonic()
         self._client = await establish_connection(
             BleakClientWithServiceCache,
             ble_device,
@@ -124,6 +127,16 @@ class IledColorDevice:
             await self._client.start_notify(CHAR_NOTIFY, self._on_notify)
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("%s notify subscribe failed: %s", self.address, err)
+        mtu = getattr(self._client, "mtu_size", 0)
+        _LOGGER.info("%s connected in %.2fs (mtu=%s)", self.address, time.monotonic() - t0, mtu)
+        if mtu and mtu <= 23:
+            _LOGGER.warning(
+                "%s negotiated MTU is only %s — transfers are split into ~1-byte chunks and "
+                "will be very slow. If you use an ESPHome Bluetooth proxy, update it; or set "
+                "Color type to 'mono' in the integration options.",
+                self.address,
+                mtu,
+            )
 
     async def _write(self, char: str, data: bytes) -> None:
         async with self._lock:
@@ -136,12 +149,15 @@ class IledColorDevice:
         await self._write(char, build_frame(op, payload))
 
     async def send_raw(self, data: bytes, char: str = CHAR_WRITE1) -> None:
+        _LOGGER.info("%s send_raw %s -> %s", self.address, char[4:8], bytes(data).hex())
         await self._write(char, bytes(data))
 
     async def set_power(self, on: bool) -> None:
+        _LOGGER.info("%s power %s", self.address, "on" if on else "off")
         await self._write(CHAR_WRITE1, power_frame(on, app2024=self._app2024()))
 
     async def set_brightness_level(self, level: int) -> None:
+        _LOGGER.info("%s brightness %d", self.address, level)
         await self._write(CHAR_WRITE1, brightness_frame(level, app2024=self._app2024()))
 
     async def _stream(self, chunks: list[bytes], char: str) -> None:
@@ -177,11 +193,15 @@ class IledColorDevice:
             await self._ensure()
             assert self._client is not None
             mtu = getattr(self._client, "mtu_size", 0) or _DEFAULT_MTU
+            t0 = time.monotonic()
             if self._app2024():
                 item = bulk.item_data(0, 0, width, height, frames, effect=effects, speed=speed)
                 chunks = bulk.bulk_frames(bulk.program_frame([item]), mtu)
-                _LOGGER.debug("%s source send (0xA8): %d chunks, mtu=%d", self.address, len(chunks), mtu)
                 await self._stream(chunks, CHAR_WRITE2)
+                _LOGGER.info(
+                    "%s sent app2024 (%d frames, %d chunks, mtu=%d) in %.2fs",
+                    self.address, len(frames), len(chunks), mtu, time.monotonic() - t0,
+                )
                 return
             if gif:
                 text_data = bulk.legacy_gif_source(
@@ -194,16 +214,12 @@ class IledColorDevice:
                 text_data = bulk.legacy_source(params, b"".join(frames))
             header = bulk.legacy_header_frame(text_data)
             chunks = bulk.legacy_bulk_frames(text_data, mtu)
-            _LOGGER.debug(
-                "%s source send (legacy): header %dB, data %dB, %d chunks, mtu=%d",
-                self.address,
-                len(header),
-                len(text_data),
-                len(chunks),
-                mtu,
-            )
             await self._client.write_gatt_char(CHAR_WRITE1, header, response=False)
             await self._stream(chunks, CHAR_WRITE2)
+            _LOGGER.info(
+                "%s sent legacy (%d frames, %dB, %d chunks, mtu=%d) in %.2fs",
+                self.address, len(frames), len(text_data), len(chunks), mtu, time.monotonic() - t0,
+            )
 
     def _encode(self, grid, w: int, h: int) -> bytes:
         opts = self.entry.options
