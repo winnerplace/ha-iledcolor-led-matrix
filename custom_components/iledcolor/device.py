@@ -29,7 +29,8 @@ from .protocol import Capability, brightness_frame, build_frame, power_frame
 _LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_MTU = 23
-_ACK_TIMEOUT = 2.0
+_ACK_TIMEOUT = 0.8
+_ACK_GIVE_UP = 3
 _MAX_PANEL = 1024
 RGB = tuple[int, int, int]
 
@@ -153,14 +154,26 @@ class IledColorDevice:
                 len(chunks),
                 mtu,
             )
+            wait_ack = True
+            misses = 0
             for chunk in chunks:
                 self._ack.clear()
                 await self._client.write_gatt_char(CHAR_WRITE2, chunk, response=False)
+                if not wait_ack:
+                    continue
                 try:
                     await asyncio.wait_for(self._ack.wait(), timeout=_ACK_TIMEOUT)
+                    misses = 0
                 except asyncio.TimeoutError:
                     self._ack.clear()
-                    _LOGGER.debug("%s bulk ack timeout, continuing", self.address)
+                    misses += 1
+                    if misses >= _ACK_GIVE_UP:
+                        wait_ack = False
+                        _LOGGER.debug(
+                            "%s no bulk ACK after %d chunks; streaming remainder without waiting",
+                            self.address,
+                            misses,
+                        )
 
     def _build_text_item(self, text: str, w: int, h: int, color: RGB, effect: int, speed: int) -> bytes:
         grid = render.rasterize_text(text, w, h, color=color)

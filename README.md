@@ -9,7 +9,7 @@ Reverse-engineered from the vendor's published source
 
 [![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=winnerplace&repository=ha-iledcolor-led-matrix&category=integration)
 
-> **Status: 26.6.6 — validation build.** Power and brightness (legacy framing) are
+> **Status: 26.6.7 — validation build.** Power and brightness (legacy framing) are
 > confirmed working on a field device. 26.6.6 adds a **Display text** entity (type
 > on the device page → shows on the panel) and a **legacy `0x54 0x00` bulk** path
 > selected by the *Frame generation* option (default `legacy`), since the

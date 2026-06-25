@@ -11,7 +11,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CHAR_WRITE1, CHAR_WRITE2, CONF_CAPABILITY, DOMAIN
 from .device import IledColorDevice
-from .protocol import Capability
+from .protocol import Capability, find_capability_blob, parse_capability
 from .status_display import StatusDisplay
 
 PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SWITCH, Platform.TEXT]
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if bluetooth.async_ble_device_from_address(hass, address, connectable=True) is None:
         raise ConfigEntryNotReady(f"{address} not found")
 
-    capability = Capability.from_dict(entry.data.get(CONF_CAPABILITY, {}))
+    capability = _reparse_capability(hass, entry, address)
     device = IledColorDevice(hass, entry, capability)
     coordinator = StatusDisplay(hass, entry, device)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
@@ -62,6 +62,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     _register_services(hass)
     return True
+
+
+def _reparse_capability(hass: HomeAssistant, entry: ConfigEntry, address: str) -> Capability:
+    stored = Capability.from_dict(entry.data.get(CONF_CAPABILITY, {}))
+    info = bluetooth.async_last_service_info(hass, address, connectable=True)
+    if info is None:
+        return stored
+    fresh = parse_capability(find_capability_blob(info))
+    if fresh is None or not (1 <= fresh.width <= 1024 and 1 <= fresh.height <= 1024):
+        return stored
+    if fresh.as_dict() != stored.as_dict():
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_CAPABILITY: fresh.as_dict()}
+        )
+    return fresh
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
