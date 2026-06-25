@@ -19,6 +19,29 @@
       "already_configured": "This device is already configured."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Status display",
+        "description": "Pick the entities to rotate on the matrix. Set the update interval and toggle the Status display switch.",
+        "data": {
+          "entities": "Entities to display"
+        }
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "update_interval": {
+        "name": "Update interval"
+      }
+    },
+    "switch": {
+      "status_display": {
+        "name": "Status display"
+      }
+    }
+  },
   "services": {
     "send_raw": {
       "name": "Send raw frame",

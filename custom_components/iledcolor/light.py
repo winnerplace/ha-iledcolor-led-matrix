@@ -6,7 +6,6 @@ from homeassistant.components.light import ATTR_BRIGHTNESS, ColorMode, LightEnti
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
@@ -16,7 +15,7 @@ from .device import IledColorDevice
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    device: IledColorDevice = hass.data[DOMAIN][entry.entry_id]
+    device: IledColorDevice = hass.data[DOMAIN][entry.entry_id]["device"]
     async_add_entities([IledColorLight(entry, device)])
 
 
@@ -31,14 +30,7 @@ class IledColorLight(LightEntity):
         self._attr_unique_id = entry.unique_id or entry.data[CONF_ADDRESS]
         self._attr_is_on = False
         self._attr_brightness = 255
-        cap = device.capability
-        self._attr_device_info = DeviceInfo(
-            connections={(CONNECTION_BLUETOOTH, device.address)},
-            identifiers={(DOMAIN, self._attr_unique_id)},
-            manufacturer="I-ledshow",
-            model=f"{cap.width}x{cap.height}" if cap.width else "LED Matrix",
-            name="iLEDcolor",
-        )
+        self._attr_device_info = device.device_info(self._attr_unique_id)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:

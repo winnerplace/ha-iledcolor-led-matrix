@@ -7,8 +7,9 @@ from collections.abc import Callable
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 from homeassistant.components import bluetooth
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 
-from .const import CHAR_NOTIFY, CHAR_WRITE1
+from .const import CHAR_NOTIFY, CHAR_WRITE1, DOMAIN
 from .protocol import Capability, brightness_frame, build_frame, power_frame
 
 _LOGGER = logging.getLogger(__name__)
@@ -79,6 +80,19 @@ class IledColorDevice:
 
     async def set_brightness_level(self, level: int) -> None:
         await self._write(CHAR_WRITE1, brightness_frame(level))
+
+    async def display_text(self, text: str) -> None:
+        raise NotImplementedError("display_text pending 0xA8 bulk wire protocol")
+
+    def device_info(self, unique_id: str) -> DeviceInfo:
+        cap = self.capability
+        return DeviceInfo(
+            connections={(CONNECTION_BLUETOOTH, self.address)},
+            identifiers={(DOMAIN, unique_id)},
+            manufacturer="I-ledshow",
+            model=f"{cap.width}x{cap.height}" if cap.width else "LED Matrix",
+            name="iLEDcolor",
+        )
 
     async def disconnect(self) -> None:
         async with self._lock:

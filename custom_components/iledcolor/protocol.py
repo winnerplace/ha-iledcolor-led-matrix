@@ -16,7 +16,7 @@ def power_frame(on: bool) -> bytes:
 
 def brightness_frame(level: int) -> bytes:
     level = max(1, min(10, level))
-    return build_frame(OP_BRIGHTNESS, [10 - level, 0])
+    return build_frame(OP_BRIGHTNESS, [11 - level] + [0] * 17)
 
 
 @dataclass

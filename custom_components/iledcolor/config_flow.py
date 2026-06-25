@@ -7,10 +7,17 @@ from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.const import CONF_ADDRESS
+from homeassistant.core import callback
+from homeassistant.helpers import selector
 
-from .const import CONF_CAPABILITY, DOMAIN, SERVICE_UUID
+from .const import CONF_CAPABILITY, CONF_ENTITIES, DOMAIN, SERVICE_UUID
 from .protocol import find_capability_blob, parse_capability
 
 
@@ -26,6 +33,11 @@ class IledColorConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._discovery: BluetoothServiceInfoBleak | None = None
         self._discovered: dict[str, BluetoothServiceInfoBleak] = {}
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> "IledColorOptionsFlow":
+        return IledColorOptionsFlow(config_entry)
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -91,4 +103,31 @@ class IledColorConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_ADDRESS: info.address,
                 CONF_CAPABILITY: cap.as_dict() if cap else {},
             },
+        )
+
+
+class IledColorOptionsFlow(OptionsFlow):
+    def __init__(self, config_entry: ConfigEntry) -> None:
+        self._entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data={**self._entry.options, **user_input})
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_ENTITIES,
+                        default=self._entry.options.get(CONF_ENTITIES, []),
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            multiple=True,
+                            domain=["sensor", "binary_sensor", "weather", "climate"],
+                        )
+                    )
+                }
+            ),
         )

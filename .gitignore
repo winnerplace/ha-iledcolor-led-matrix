@@ -6,3 +6,4 @@ _re/
 __pycache__/
 *.pyc
 .DS_Store
+.idea/

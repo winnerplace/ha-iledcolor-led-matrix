@@ -11,8 +11,9 @@ from homeassistant.helpers import config_validation as cv
 from .const import CHAR_WRITE1, CHAR_WRITE2, CONF_CAPABILITY, DOMAIN
 from .device import IledColorDevice
 from .protocol import Capability
+from .status_display import StatusDisplay
 
-PLATFORMS = [Platform.LIGHT]
+PLATFORMS = [Platform.LIGHT, Platform.NUMBER, Platform.SWITCH]
 
 SERVICE_SEND_RAW = "send_raw"
 SEND_RAW_SCHEMA = vol.Schema(
@@ -30,11 +31,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     capability = Capability.from_dict(entry.data.get(CONF_CAPABILITY, {}))
     device = IledColorDevice(hass, address, capability)
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = device
+    coordinator = StatusDisplay(hass, entry, device)
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+        "device": device,
+        "coordinator": coordinator,
+    }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     _register_services(hass)
     return True
+
+
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    coordinator: StatusDisplay = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator.apply_options()
+    coordinator.notify()
 
 
 def _register_services(hass: HomeAssistant) -> None:
@@ -44,8 +56,8 @@ def _register_services(hass: HomeAssistant) -> None:
     async def _send_raw(call: ServiceCall) -> None:
         data = bytes.fromhex(call.data["data"].replace(" ", ""))
         char = CHAR_WRITE2 if call.data["characteristic"] == "write2" else CHAR_WRITE1
-        for device in hass.data.get(DOMAIN, {}).values():
-            await device.send_raw(data, char)
+        for runtime in hass.data.get(DOMAIN, {}).values():
+            await runtime["device"].send_raw(data, char)
 
     hass.services.async_register(DOMAIN, SERVICE_SEND_RAW, _send_raw, schema=SEND_RAW_SCHEMA)
 
@@ -53,8 +65,9 @@ def _register_services(hass: HomeAssistant) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
-        device: IledColorDevice = hass.data[DOMAIN].pop(entry.entry_id)
-        await device.disconnect()
+        runtime = hass.data[DOMAIN].pop(entry.entry_id)
+        await runtime["coordinator"].async_stop()
+        await runtime["device"].disconnect()
         if not hass.data[DOMAIN]:
             hass.services.async_remove(DOMAIN, SERVICE_SEND_RAW)
     return unloaded

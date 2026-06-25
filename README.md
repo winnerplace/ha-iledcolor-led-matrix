@@ -9,9 +9,16 @@ Reverse-engineered from the vendor's published source
 
 [![Open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=winnerplace&repository=ha-iledcolor-led-matrix&category=integration)
 
-> **Status: 26.6.1 — validation build.** Power and brightness only. The frames
+> **Status: 26.6.2 — validation build.** Power and brightness only. The frames
 > are derived statically; confirm against your device before relying on it. Text /
-> image / GIF (bulk transfer) are not implemented yet.
+> image / GIF (bulk transfer) are not implemented yet — the bulk wire format (0xA8)
+> is now reverse-engineered (`.claude/docs/analysis/iledcolor-bulk-wire-spec.md`)
+> but unverified on hardware.
+>
+> 26.6.2 corrects the brightness frame to the shipped app's encoding
+> (`11 − level`, 18-byte payload) — **this is the change to validate**. An auto
+> "Status display" (number + switch entities to rotate sensor values) is scaffolded
+> but does not render to the panel yet (pending the bulk path).
 
 Versioning: CalVer `YY.M.BUILD` (no zero-padding; build number starts at 1).
 
@@ -59,7 +66,7 @@ back what the screen does and what `A953` notifies:
 
 ```yaml
 # Developer Tools → Actions → iledcolor.send_raw
-data: "54 09 00 04 05 00 00 66"   # brightness level 5
+data: "54 09 00 14 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 77"  # brightness level 5
 characteristic: write1
 ```
 
