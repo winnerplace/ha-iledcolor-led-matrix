@@ -4,6 +4,11 @@
 
 버전 체계는 `YY.M.PATCH`이며 릴리즈마다 PATCH를 1씩 올린다. manifest `version`, git 태그, GitHub 릴리즈가 항상 동일해야 한다. 자세한 규칙은 [CLAUDE.md](CLAUDE.md) 참고.
 
+## [26.6.26] - 2026-06-26
+
+### Fixed
+- **상태표시 값이 영문으로 나오던 문제** — season(`spring`)·달 상태(`full_moon`) 등 열거형 센서가 HA 화면에선 한글인데 LED에는 원본 영문으로 표시됐다. 엔티티 이름은 이미 번역돼 나왔지만 상태값은 `state.state` 원본을 그대로 썼던 탓. HA 프론트와 동일한 순서(등록부 `translation_key`+platform → `device_class` → 기본)로 번역 카탈로그를 조회해 화면과 같은 한글로 표시하도록 수정. 번역이 없는 센서는 기존대로 원본값을 유지한다.
+
 ## [26.6.25] - 2026-06-26
 
 ### Changed

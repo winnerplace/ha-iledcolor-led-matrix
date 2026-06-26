@@ -7,8 +7,13 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
+from homeassistant.core import HomeAssistant, State, callback
+from homeassistant.helpers import (
+    area_registry as ar,
+    device_registry as dr,
+    entity_registry as er,
+    translation,
+)
 from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
@@ -64,6 +69,7 @@ class StatusDisplay:
         self.color_random = False
         self.slide = False
         self.last_text = ""
+        self._translations: dict[str, str] = {}
         self._index = 0
         self._unsub: Callable[[], None] | None = None
         self._listeners: list[Callable[[], None]] = []
@@ -128,9 +134,52 @@ class StatusDisplay:
             name = self._strip_device(entity_id, name)
             unit = state.attributes.get("unit_of_measurement", "")
             area = self._area_name(entity_id)
-            parts = [p for p in (area, name, f"{state.state}{unit}") if p]
+            value = self._localized_state(entity_id, state)
+            parts = [p for p in (area, name, f"{value}{unit}") if p]
             rows.append(" ".join(parts))
         return rows
+
+    async def _load_translations(self) -> None:
+        language = self.hass.config.language
+        ent_reg = er.async_get(self.hass)
+        platforms: set[str] = set()
+        domains: set[str] = set()
+        for entity_id in self.entities:
+            domains.add(entity_id.split(".", 1)[0])
+            entry = ent_reg.async_get(entity_id)
+            if entry and entry.platform:
+                platforms.add(entry.platform)
+        result: dict[str, str] = {}
+        if platforms:
+            result.update(
+                await translation.async_get_translations(
+                    self.hass, language, "entity", integrations=platforms
+                )
+            )
+        if domains:
+            result.update(
+                await translation.async_get_translations(
+                    self.hass, language, "entity_component", integrations=domains
+                )
+            )
+        self._translations = result
+
+    def _localized_state(self, entity_id: str, state: State) -> str:
+        raw = state.state
+        domain = entity_id.split(".", 1)[0]
+        entry = er.async_get(self.hass).async_get(entity_id)
+        if entry and entry.translation_key and entry.platform:
+            key = f"component.{entry.platform}.entity.{domain}.{entry.translation_key}.state.{raw}"
+            if key in self._translations:
+                return self._translations[key]
+        device_class = state.attributes.get("device_class")
+        if device_class:
+            key = f"component.{domain}.entity_component.{device_class}.state.{raw}"
+            if key in self._translations:
+                return self._translations[key]
+        return self._translations.get(
+            f"component.{domain}.entity_component._.state.{raw}", raw
+        )
 
     def _strip_device(self, entity_id: str, name: str) -> str:
         entry = er.async_get(self.hass).async_get(entity_id)
@@ -185,6 +234,7 @@ class StatusDisplay:
     async def _tick(self, _now: datetime | None = None) -> None:
         if not self.device.power_on:
             return
+        await self._load_translations()
         rows = self._rows()
         if not rows:
             return
