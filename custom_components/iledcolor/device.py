@@ -40,6 +40,8 @@ _ACK_GIVE_UP = 3
 _WINDOW = 32
 _GIF_STAY = 10
 _MAX_PANEL = 1024
+_SLIDE_MAX_FRAMES = 120
+_SLIDE_STAY = 2
 RGB = tuple[int, int, int]
 
 
@@ -257,12 +259,29 @@ class IledColorDevice:
     def _weight(self) -> int:
         return int(self.entry.options.get(CONF_WEIGHT, 0))
 
-    def _text_frame(self, text: str, w: int, h: int, color: RGB, slide: bool):
+    def _text_frame(self, text: str, w: int, h: int, color: RGB) -> bytes:
         grid = render.rasterize_text(
-            text, w, h, color=color, font_path=self._font_path(), weight=self._weight(), slide=slide
+            text, w, h, color=color, font_path=self._font_path(), weight=self._weight()
         )
-        wa, ha = len(grid[0]), len(grid)
-        return self._encode(grid, wa, ha), wa, ha
+        return self._encode(grid, w, h)
+
+    def _slide_frames(self, text: str, w: int, h: int, color: RGB) -> tuple[list[bytes], int]:
+        grid = render.rasterize_text(
+            text, w, h, color=color, font_path=self._font_path(), weight=self._weight(), slide=True
+        )
+        natural = len(grid[0])
+        if natural <= w:
+            return [self._encode(grid, w, h)], 1
+        gap = w
+        total = natural + gap
+        black = (0, 0, 0)
+        ext = [list(row) + [black] * gap for row in grid]
+        step = max(3, -(-total // _SLIDE_MAX_FRAMES))
+        frames = [
+            self._encode([(ext[y] * 2)[off : off + w] for y in range(h)], w, h)
+            for off in range(0, total, step)
+        ]
+        return frames, len(frames)
 
     def _raster_fill(self, color: RGB, w: int, h: int) -> bytes:
         return self._encode([[color for _ in range(w)] for _ in range(h)], w, h)
@@ -315,11 +334,20 @@ class IledColorDevice:
         slide: bool = False,
     ) -> None:
         w, h = self._panel()
-        pixels, wa, ha = await self.hass.async_add_executor_job(
-            self._text_frame, text, w, h, color, slide
-        )
-        eff = 1 if (slide and wa > w and effect not in (1, 2)) else effect
-        await self._send_source(wa, ha, [pixels], effects=eff, speed=speed, stay=dwell)
+        if slide:
+            frames, n = await self.hass.async_add_executor_job(
+                self._slide_frames, text, w, h, color
+            )
+            await self._send_source(
+                w, h, frames,
+                effects=(0 if n > 1 else effect),
+                speed=speed,
+                gif=n > 1,
+                stay=(_SLIDE_STAY if n > 1 else dwell),
+            )
+            return
+        pixels = await self.hass.async_add_executor_job(self._text_frame, text, w, h, color)
+        await self._send_source(w, h, [pixels], effects=effect, speed=speed, stay=dwell)
 
     async def display_status(
         self,
