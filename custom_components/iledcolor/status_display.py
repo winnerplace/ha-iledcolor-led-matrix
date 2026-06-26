@@ -21,12 +21,15 @@ from .const import (
     CONF_ENABLED,
     CONF_ENTITIES,
     CONF_INTERVAL,
+    CONF_MODE,
     CONF_MTU,
     CONF_SPEED,
     DEFAULT_DWELL,
     DEFAULT_EFFECT,
     DEFAULT_INTERVAL,
     DEFAULT_SPEED,
+    MODE_STATUS,
+    MODE_TEXT,
 )
 from .device import IledColorDevice
 
@@ -48,6 +51,7 @@ class StatusDisplay:
         self.entry = entry
         self.device = device
         self.interval = DEFAULT_INTERVAL
+        self.mode = MODE_TEXT
         self.enabled = False
         self.entities: list[str] = []
         self.effect = DEFAULT_EFFECT
@@ -75,7 +79,11 @@ class StatusDisplay:
     def apply_options(self) -> None:
         opts = self.entry.options
         self.interval = int(opts.get(CONF_INTERVAL, DEFAULT_INTERVAL))
-        self.enabled = bool(opts.get(CONF_ENABLED, False))
+        mode = opts.get(CONF_MODE)
+        if mode is None:
+            mode = MODE_STATUS if opts.get(CONF_ENABLED, False) else MODE_TEXT
+        self.mode = mode
+        self.enabled = mode == MODE_STATUS
         self.entities = list(opts.get(CONF_ENTITIES, []))
         self.effect = int(opts.get(CONF_EFFECT, DEFAULT_EFFECT))
         self.speed = int(opts.get(CONF_SPEED, DEFAULT_SPEED))
@@ -155,7 +163,13 @@ class StatusDisplay:
             return [_random_color() for _ in range(count)]
         return [self.color if self.color_on else COLOR_DEFAULT] * count
 
+    async def async_refresh(self) -> None:
+        if self.enabled:
+            await self._tick()
+
     async def _tick(self, _now: datetime | None = None) -> None:
+        if not self.device.power_on:
+            return
         rows = self._rows()
         if not rows:
             return

@@ -6,15 +6,18 @@
 
 type: vertical-stack
 cards:
-  # 설정 + 텍스트 입력 (효과/속도/정지를 맞추고 텍스트만 입력하면 그 효과로 스크롤)
+  # 제어: 전원 > 텍스트 > 색상 (기기 페이지는 이름 알파벳순 고정 — 순서를 정하려면 이렇게 대시보드로)
   - type: entities
     title: iLEDcolor
     entities:
-      - entity: text.iledcolor_display_text   # 텍스트 표시
+      - entity: light.iledcolor                # 전원
+      - entity: text.iledcolor_display_text    # 텍스트
+      - entity: light.iledcolor_text_color     # 색상
+      - entity: select.iledcolor_display_mode  # 표시 모드 (상태표시 ↔ 텍스트 입력)
+      - entity: switch.iledcolor_color_random  # 랜덤 색상
       - entity: select.iledcolor_effect        # 효과
       - entity: number.iledcolor_speed         # 속도
       - entity: number.iledcolor_dwell         # 정지
-      - entity: switch.iledcolor_status_display # 상태표시
       - entity: number.iledcolor_update_interval # 갱신 주기
 
   # 단색 버튼 (파일 불필요 — 버튼에 가장 적합)

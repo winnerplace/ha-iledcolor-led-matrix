@@ -6,7 +6,7 @@ from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import CONF_MODE, DOMAIN, MODE_TEXT
 from .device import IledColorDevice
 from .status_display import StatusDisplay
 
@@ -35,6 +35,8 @@ class IledColorTextEntity(TextEntity):
         self._attr_native_value = ""
 
     async def async_set_value(self, value: str) -> None:
+        if self._coordinator.mode != MODE_TEXT:
+            await self._coordinator.async_set(**{CONF_MODE: MODE_TEXT})
         await self._device.display_text(
             value,
             color=self._coordinator.text_color(),

@@ -44,6 +44,10 @@
       "weight": { "name": "Font weight (0 = regular, 1-2 = bold)" }
     },
     "select": {
+      "display_mode": {
+        "name": "Display mode",
+        "state": { "status": "Status display", "text": "Text input" }
+      },
       "effect": { "name": "Effect" },
       "font": {
         "name": "Font",
@@ -67,7 +71,6 @@
       }
     },
     "switch": {
-      "status_display": { "name": "Status display" },
       "flip_h": { "name": "Flip horizontal" },
       "flip_v": { "name": "Flip vertical" },
       "color_random": { "name": "Random color" }

@@ -24,6 +24,12 @@ CONF_CAPABILITY = "capability"
 CONF_ENTITIES = "entities"
 CONF_INTERVAL = "interval"
 CONF_ENABLED = "enabled"
+
+CONF_MODE = "mode"
+MODE_STATUS = "status"
+MODE_TEXT = "text"
+MODE_OPTIONS = [MODE_STATUS, MODE_TEXT]
+MODE_DEFAULT = MODE_TEXT
 CONF_WIDTH = "panel_width"
 CONF_HEIGHT = "panel_height"
 CONF_COLOR_TYPE = "color_type"

@@ -26,7 +26,7 @@ async def async_setup_entry(
     device, coord = runtime["device"], runtime["coordinator"]
     async_add_entities(
         [
-            IledColorLight(entry, device),
+            IledColorLight(entry, device, coord),
             IledColorTextColorLight(entry, device, coord),
         ]
     )
@@ -38,33 +38,39 @@ class IledColorLight(LightEntity, RestoreEntity):
     _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
     _attr_color_mode = ColorMode.BRIGHTNESS
 
-    def __init__(self, entry: ConfigEntry, device: IledColorDevice) -> None:
+    def __init__(
+        self, entry: ConfigEntry, device: IledColorDevice, coordinator: StatusDisplay
+    ) -> None:
         self._device = device
+        self._coordinator = coordinator
         self._attr_unique_id = entry.unique_id or entry.data[CONF_ADDRESS]
-        self._attr_is_on = False
         self._attr_brightness = 255
         self._attr_device_info = device.device_info(self._attr_unique_id)
+
+    @property
+    def is_on(self) -> bool:
+        return self._device.power_on
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         last = await self.async_get_last_state()
         if last is not None:
-            self._attr_is_on = last.state == "on"
+            self._device.power_on = last.state == "on"
             if (brightness := last.attributes.get(ATTR_BRIGHTNESS)) is not None:
                 self._attr_brightness = int(brightness)
+        self.async_on_remove(self._device.add_power_listener(self.async_write_ha_state))
+        if self._device.power_on:
+            self.hass.async_create_task(self._coordinator.async_refresh())
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
             await self._device.set_brightness_level(max(1, round(brightness / 255 * 10)))
             self._attr_brightness = brightness
         await self._device.set_power(True)
-        self._attr_is_on = True
-        self.async_write_ha_state()
+        await self._coordinator.async_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self._device.set_power(False)
-        self._attr_is_on = False
-        self.async_write_ha_state()
 
 
 class IledColorTextColorLight(LightEntity):

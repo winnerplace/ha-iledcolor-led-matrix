@@ -22,35 +22,58 @@
   "options": {
     "step": {
       "init": {
-        "title": "Status display & panel",
-        "description": "Pick the entities to rotate on the matrix. Override panel size / color type / framing generation if auto-detection is wrong (0 = auto).",
+        "title": "Status display",
+        "description": "Pick the entities to rotate on the matrix. Panel size / font / color type / frame generation are set from the device settings.",
         "data": {
-          "entities": "Entities to display",
-          "panel_width": "Panel width (0 = auto)",
-          "panel_height": "Panel height (0 = auto)",
-          "mtu": "MTU override (0 = auto; small MTU = slow transfers)",
-          "font": "Font (CJK/emoji)",
-          "weight": "Font weight (0 = regular, 1-2 = bold)",
-          "color_type": "Color type",
-          "generation": "Frame generation"
+          "entities": "Entities to display"
         }
       }
     }
   },
   "entity": {
+    "light": {
+      "text_color": { "name": "Text color" }
+    },
     "number": {
       "update_interval": { "name": "Update interval" },
       "speed": { "name": "Speed" },
       "dwell": { "name": "Dwell" },
-      "mtu": { "name": "MTU (0 = auto)" }
+      "mtu": { "name": "MTU (0 = auto)" },
+      "panel_width": { "name": "Panel width (0 = auto)" },
+      "panel_height": { "name": "Panel height (0 = auto)" },
+      "weight": { "name": "Font weight (0 = regular, 1-2 = bold)" }
     },
     "select": {
-      "effect": { "name": "Effect" }
+      "display_mode": {
+        "name": "Display mode",
+        "state": { "status": "Status display", "text": "Text input" }
+      },
+      "effect": { "name": "Effect" },
+      "font": {
+        "name": "Font",
+        "state": {
+          "pretendard": "Pretendard",
+          "unifont": "GNU Unifont",
+          "d2coding": "D2Coding",
+          "galmuri14": "Galmuri 14",
+          "cafe24ssurround": "Cafe24 Ssurround",
+          "cafe24ssurroundair": "Cafe24 Ssurround Air",
+          "mona12": "Mona 12"
+        }
+      },
+      "color_type": {
+        "name": "Color type",
+        "state": { "auto": "Auto", "mono": "Mono", "full": "Full color" }
+      },
+      "generation": {
+        "name": "Frame generation",
+        "state": { "legacy": "Legacy", "app2024": "App 2024" }
+      }
     },
     "switch": {
-      "status_display": { "name": "Status display" },
       "flip_h": { "name": "Flip horizontal" },
-      "flip_v": { "name": "Flip vertical" }
+      "flip_v": { "name": "Flip vertical" },
+      "color_random": { "name": "Random color" }
     },
     "text": {
       "display_text": { "name": "Display text" }

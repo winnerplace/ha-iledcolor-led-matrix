@@ -44,6 +44,10 @@
       "weight": { "name": "글자 굵기 (0=보통, 1·2=굵게)" }
     },
     "select": {
+      "display_mode": {
+        "name": "표시 모드",
+        "state": { "status": "상태표시", "text": "텍스트 입력" }
+      },
       "effect": { "name": "효과" },
       "font": {
         "name": "폰트",
@@ -67,7 +71,6 @@
       }
     },
     "switch": {
-      "status_display": { "name": "상태표시" },
       "flip_h": { "name": "좌우 반전" },
       "flip_v": { "name": "상하 반전" },
       "color_random": { "name": "랜덤 색상" }

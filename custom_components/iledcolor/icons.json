@@ -7,7 +7,6 @@
       "display_text": { "default": "mdi:format-text" }
     },
     "switch": {
-      "status_display": { "default": "mdi:monitor-dashboard" },
       "flip_h": { "default": "mdi:flip-horizontal" },
       "flip_v": { "default": "mdi:flip-vertical" },
       "color_random": { "default": "mdi:dice-multiple" }
@@ -22,6 +21,7 @@
       "weight": { "default": "mdi:format-bold" }
     },
     "select": {
+      "display_mode": { "default": "mdi:monitor-dashboard" },
       "effect": { "default": "mdi:auto-fix" },
       "font": { "default": "mdi:format-font" },
       "color_type": { "default": "mdi:palette-swatch" },

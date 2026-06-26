@@ -57,9 +57,11 @@ class IledColorDevice:
         self.address = entry.data[CONF_ADDRESS]
         self.capability = capability
         self.last_notify: bytes | None = None
+        self.power_on = False
         self._client: BleakClientWithServiceCache | None = None
         self._lock = asyncio.Lock()
         self._listeners: list[Callable[[bytes], None]] = []
+        self._power_listeners: list[Callable[[], None]] = []
         self._ack = asyncio.Event()
         self._acks = 0
 
@@ -96,6 +98,15 @@ class IledColorDevice:
     def add_notify_listener(self, cb: Callable[[bytes], None]) -> Callable[[], None]:
         self._listeners.append(cb)
         return lambda: self._listeners.remove(cb)
+
+    def add_power_listener(self, cb: Callable[[], None]) -> Callable[[], None]:
+        self._power_listeners.append(cb)
+        return lambda: self._power_listeners.remove(cb)
+
+    @callback
+    def _emit_power(self) -> None:
+        for cb in list(self._power_listeners):
+            cb()
 
     @callback
     def _on_notify(self, _char, data: bytearray) -> None:
@@ -158,6 +169,8 @@ class IledColorDevice:
     async def set_power(self, on: bool) -> None:
         _LOGGER.info("%s power %s", self.address, "on" if on else "off")
         await self._write(CHAR_WRITE1, power_frame(on, app2024=self._app2024()))
+        self.power_on = on
+        self._emit_power()
 
     async def set_brightness_level(self, level: int) -> None:
         _LOGGER.info("%s brightness %d", self.address, level)
@@ -195,6 +208,12 @@ class IledColorDevice:
         async with self._lock:
             await self._ensure()
             assert self._client is not None
+            if not self.power_on:
+                await self._client.write_gatt_char(
+                    CHAR_WRITE1, power_frame(True, app2024=self._app2024()), response=False
+                )
+                self.power_on = True
+                self._emit_power()
             mtu = (
                 int(self.entry.options.get(CONF_MTU) or 0)
                 or getattr(self._client, "mtu_size", 0)
