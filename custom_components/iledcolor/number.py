@@ -12,6 +12,7 @@ from .const import (
     CONF_INTERVAL,
     CONF_MTU,
     CONF_SPEED,
+    CONF_TEXT_HEIGHT,
     CONF_WEIGHT,
     CONF_WIDTH,
     DOMAIN,
@@ -24,6 +25,9 @@ from .const import (
     PANEL_MAX,
     SPEED_MAX,
     SPEED_MIN,
+    TEXT_HEIGHT_DEFAULT,
+    TEXT_HEIGHT_MAX,
+    TEXT_HEIGHT_MIN,
     WEIGHT_MAX,
 )
 from .device import IledColorDevice
@@ -49,6 +53,10 @@ async def async_setup_entry(
             ),
             IledColorOptionNumber(
                 entry, device, coord, "weight", CONF_WEIGHT, 0, WEIGHT_MAX, NumberMode.SLIDER
+            ),
+            IledColorOptionNumber(
+                entry, device, coord, "text_height", CONF_TEXT_HEIGHT,
+                TEXT_HEIGHT_MIN, TEXT_HEIGHT_MAX, NumberMode.SLIDER, default=TEXT_HEIGHT_DEFAULT,
             ),
         ]
     )
@@ -133,10 +141,12 @@ class IledColorOptionNumber(NumberEntity):
         minimum: int,
         maximum: int,
         mode: NumberMode,
+        default: int = 0,
     ) -> None:
         self._entry = entry
         self._coordinator = coordinator
         self._conf_key = conf_key
+        self._default = default
         self._attr_translation_key = key
         self._attr_native_min_value = minimum
         self._attr_native_max_value = maximum
@@ -147,7 +157,7 @@ class IledColorOptionNumber(NumberEntity):
 
     @property
     def native_value(self) -> float:
-        return float(self._entry.options.get(self._conf_key, 0))
+        return float(self._entry.options.get(self._conf_key, self._default))
 
     async def async_set_native_value(self, value: float) -> None:
         await self._coordinator.async_set(**{self._conf_key: int(value)})

@@ -41,7 +41,8 @@
       "mtu": { "name": "MTU (0 = auto)" },
       "panel_width": { "name": "Panel width (0 = auto)" },
       "panel_height": { "name": "Panel height (0 = auto)" },
-      "weight": { "name": "Font weight (0 = regular, 1-2 = bold)" }
+      "weight": { "name": "Font weight (0 = regular, 1-2 = bold)" },
+      "text_height": { "name": "Font height (slide)" }
     },
     "select": {
       "display_mode": {

@@ -78,6 +78,15 @@ def test_slide_short_text_stays_panel_width():
     assert len(grid[0]) == 96
 
 
+def test_slide_text_height_controls_size():
+    if not _HAVE_PIL:
+        return
+    text = "가나다라마바사아자차카타파하거너더러"
+    small = render.rasterize_text(text, 96, 16, font_path=_mona(), slide=True, text_height=8)
+    big = render.rasterize_text(text, 96, 16, font_path=_mona(), slide=True, text_height=16)
+    assert len(small[0]) < len(big[0])  # smaller font height -> narrower glyphs
+
+
 def test_non_slide_stays_panel_width():
     if not _HAVE_PIL:
         return

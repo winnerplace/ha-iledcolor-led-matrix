@@ -76,6 +76,10 @@ CONF_EFFECT = "effect"
 CONF_SPEED = "speed"
 CONF_DWELL = "dwell"
 CONF_SLIDE = "slide"
+CONF_TEXT_HEIGHT = "text_height"
+TEXT_HEIGHT_DEFAULT = 12
+TEXT_HEIGHT_MIN = 6
+TEXT_HEIGHT_MAX = 32
 CONF_FLIP_H = "flip_h"
 CONF_FLIP_V = "flip_v"
 

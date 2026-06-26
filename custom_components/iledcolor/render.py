@@ -237,6 +237,7 @@ def rasterize_text(
     font_path: str | None = None,
     weight: int = 0,
     slide: bool = False,
+    text_height: int = 0,
 ) -> Grid:
     from PIL import Image
 
@@ -256,9 +257,10 @@ def rasterize_text(
         return fonts, widths, sum(widths), top, bottom - top
 
     if slide:
+        target = min(text_height, height) if text_height > 0 else height
         size = 6
         fonts, widths, total, top, text_h = layout(size)
-        for candidate in range(height, 5, -1):
+        for candidate in range(target, 5, -1):
             fonts, widths, total, top, text_h = layout(candidate)
             if text_h + pad <= height:
                 size = candidate

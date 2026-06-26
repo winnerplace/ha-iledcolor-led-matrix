@@ -41,7 +41,8 @@
       "mtu": { "name": "MTU (0=자동)" },
       "panel_width": { "name": "패널 너비 (0=자동)" },
       "panel_height": { "name": "패널 높이 (0=자동)" },
-      "weight": { "name": "글자 굵기 (0=보통, 1·2=굵게)" }
+      "weight": { "name": "글자 굵기 (0=보통, 1·2=굵게)" },
+      "text_height": { "name": "글자 크기 (슬라이드)" }
     },
     "select": {
       "display_mode": {

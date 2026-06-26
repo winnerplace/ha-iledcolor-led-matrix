@@ -19,7 +19,8 @@
       "mtu": { "default": "mdi:swap-horizontal" },
       "panel_width": { "default": "mdi:arrow-expand-horizontal" },
       "panel_height": { "default": "mdi:arrow-expand-vertical" },
-      "weight": { "default": "mdi:format-bold" }
+      "weight": { "default": "mdi:format-bold" },
+      "text_height": { "default": "mdi:format-size" }
     },
     "select": {
       "display_mode": { "default": "mdi:monitor-dashboard" },

@@ -24,11 +24,13 @@ from .const import (
     CONF_GENERATION,
     CONF_HEIGHT,
     CONF_MTU,
+    CONF_TEXT_HEIGHT,
     CONF_WEIGHT,
     CONF_WIDTH,
     DOMAIN,
     GEN_APP2024,
     GEN_LEGACY,
+    TEXT_HEIGHT_DEFAULT,
 )
 from .protocol import Capability, brightness_frame, build_frame, power_frame
 
@@ -40,8 +42,6 @@ _ACK_GIVE_UP = 3
 _WINDOW = 32
 _GIF_STAY = 10
 _MAX_PANEL = 1024
-_SLIDE_MAX_FRAMES = 120
-_SLIDE_STAY = 2
 RGB = tuple[int, int, int]
 
 
@@ -265,23 +265,25 @@ class IledColorDevice:
         )
         return self._encode(grid, w, h)
 
+    def _text_height(self) -> int:
+        return int(self.entry.options.get(CONF_TEXT_HEIGHT, TEXT_HEIGHT_DEFAULT))
+
     def _slide_frames(self, text: str, w: int, h: int, color: RGB) -> tuple[list[bytes], int]:
         grid = render.rasterize_text(
-            text, w, h, color=color, font_path=self._font_path(), weight=self._weight(), slide=True
+            text, w, h, color=color, font_path=self._font_path(), weight=self._weight(),
+            slide=True, text_height=self._text_height(),
         )
         natural = len(grid[0])
         if natural <= w:
             return [self._encode(grid, w, h)], 1
-        gap = w
-        total = natural + gap
+        frame_count = -(-natural // w)
         black = (0, 0, 0)
-        ext = [list(row) + [black] * gap for row in grid]
-        step = max(3, -(-total // _SLIDE_MAX_FRAMES))
+        padded = [row + [black] * (w * frame_count - natural) for row in grid]
         frames = [
-            self._encode([(ext[y] * 2)[off : off + w] for y in range(h)], w, h)
-            for off in range(0, total, step)
+            self._encode([padded[y][i * w : (i + 1) * w] for y in range(h)], w, h)
+            for i in range(frame_count)
         ]
-        return frames, len(frames)
+        return frames, frame_count
 
     def _raster_fill(self, color: RGB, w: int, h: int) -> bytes:
         return self._encode([[color for _ in range(w)] for _ in range(h)], w, h)
@@ -338,12 +340,9 @@ class IledColorDevice:
             frames, n = await self.hass.async_add_executor_job(
                 self._slide_frames, text, w, h, color
             )
+            eff = (effect if effect in (1, 2) else 1) if n > 1 else effect
             await self._send_source(
-                w, h, frames,
-                effects=(0 if n > 1 else effect),
-                speed=speed,
-                gif=n > 1,
-                stay=(_SLIDE_STAY if n > 1 else dwell),
+                w, h, frames, effects=eff, speed=speed, gif=n > 1, stay=dwell
             )
             return
         pixels = await self.hass.async_add_executor_job(self._text_frame, text, w, h, color)
