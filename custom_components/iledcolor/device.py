@@ -257,11 +257,12 @@ class IledColorDevice:
     def _weight(self) -> int:
         return int(self.entry.options.get(CONF_WEIGHT, 0))
 
-    def _raster_text(self, text: str, w: int, h: int, color: RGB) -> bytes:
+    def _text_frame(self, text: str, w: int, h: int, color: RGB, slide: bool):
         grid = render.rasterize_text(
-            text, w, h, color=color, font_path=self._font_path(), weight=self._weight()
+            text, w, h, color=color, font_path=self._font_path(), weight=self._weight(), slide=slide
         )
-        return self._encode(grid, w, h)
+        wa, ha = len(grid[0]), len(grid)
+        return self._encode(grid, wa, ha), wa, ha
 
     def _raster_fill(self, color: RGB, w: int, h: int) -> bytes:
         return self._encode([[color for _ in range(w)] for _ in range(h)], w, h)
@@ -311,10 +312,14 @@ class IledColorDevice:
         effect: int = 0,
         speed: int = 1,
         dwell: int = 30,
+        slide: bool = False,
     ) -> None:
         w, h = self._panel()
-        pixels = await self.hass.async_add_executor_job(self._raster_text, text, w, h, color)
-        await self._send_source(w, h, [pixels], effects=effect, speed=speed, stay=dwell)
+        pixels, wa, ha = await self.hass.async_add_executor_job(
+            self._text_frame, text, w, h, color, slide
+        )
+        eff = 1 if (slide and wa > w and effect not in (1, 2)) else effect
+        await self._send_source(wa, ha, [pixels], effects=eff, speed=speed, stay=dwell)
 
     async def display_status(
         self,

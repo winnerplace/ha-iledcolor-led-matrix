@@ -71,6 +71,7 @@
       }
     },
     "switch": {
+      "slide": { "name": "슬라이드 (긴 글 흐름)" },
       "flip_h": { "name": "좌우 반전" },
       "flip_v": { "name": "상하 반전" },
       "color_random": { "name": "랜덤 색상" }
@@ -102,7 +103,8 @@
         "color": { "name": "색상", "description": "RGB 색 (풀컬러 패널만)." },
         "effect": { "name": "효과", "description": "0 정지 / 1 좌 / 2 우 / 3 상 / 4 하 / 5 눈송이 / 6 두루마리 / 7 레이저." },
         "speed": { "name": "속도", "description": "스크롤/애니메이션 속도 (낮을수록 느림)." },
-        "dwell": { "name": "정지 시간", "description": "여러 화면일 때 페이지 사이 정지. 0 = 무정지." }
+        "dwell": { "name": "정지 시간", "description": "여러 화면일 때 페이지 사이 정지. 0 = 무정지." },
+        "slide": { "name": "슬라이드", "description": "글자 크기를 줄이지 않고 고정한 뒤 긴 글을 가로로 흘림(자동 좌 스크롤)." }
       }
     },
     "display_image": {

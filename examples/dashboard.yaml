@@ -14,6 +14,7 @@ cards:
       - entity: text.iledcolor_display_text    # 텍스트
       - entity: light.iledcolor_text_color     # 색상
       - entity: select.iledcolor_display_mode  # 표시 모드 (상태표시 ↔ 텍스트 입력)
+      - entity: switch.iledcolor_slide         # 슬라이드 (긴 글 흐름)
       - entity: switch.iledcolor_color_random  # 랜덤 색상
       - entity: select.iledcolor_effect        # 효과
       - entity: number.iledcolor_speed         # 속도

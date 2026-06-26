@@ -7,6 +7,7 @@
       "display_text": { "default": "mdi:format-text" }
     },
     "switch": {
+      "slide": { "default": "mdi:transfer-right" },
       "flip_h": { "default": "mdi:flip-horizontal" },
       "flip_v": { "default": "mdi:flip-vertical" },
       "color_random": { "default": "mdi:dice-multiple" }

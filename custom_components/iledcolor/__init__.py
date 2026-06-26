@@ -41,6 +41,7 @@ DISPLAY_TEXT_SCHEMA = vol.Schema(
         vol.Optional("effect", default=0): _EFFECT,
         vol.Optional("speed", default=1): _BYTE,
         vol.Optional("dwell", default=30): _BYTE,
+        vol.Optional("slide", default=False): cv.boolean,
     }
 )
 DISPLAY_COLOR_SCHEMA = vol.Schema(
@@ -172,6 +173,7 @@ def _register_services(hass: HomeAssistant) -> None:
                 effect=call.data["effect"],
                 speed=call.data["speed"],
                 dwell=call.data["dwell"],
+                slide=call.data["slide"],
             )
 
     async def _display_image(call: ServiceCall) -> None:

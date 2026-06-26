@@ -3,7 +3,15 @@ from __future__ import annotations
 import functools
 import io
 import pathlib
+import threading
 from collections.abc import Sequence
+
+try:
+    import freetype as _freetype
+except Exception:  # pragma: no cover - optional, falls back to monochrome
+    _freetype = None
+
+_ft_lock = threading.Lock()
 
 RGB = tuple[int, int, int]
 Grid = list[list[RGB]]
@@ -144,6 +152,81 @@ def _font_for(ch: str, size: int, primary: str | None):
     return _load_font(primary, size)
 
 
+@functools.lru_cache(maxsize=16)
+def _ft_face(path: str | None):
+    if _freetype is None or not path:
+        return None
+    try:
+        return _freetype.Face(path)
+    except Exception:
+        return None
+
+
+def _ft_color_glyph(path: str | None, ch: str, px: int):
+    face = _ft_face(path)
+    if face is None:
+        return None
+    from PIL import Image
+
+    with _ft_lock:
+        try:
+            if face.get_char_index(ord(ch)) == 0:
+                return None
+            face.set_pixel_sizes(0, max(1, px))
+            face.load_char(ch, _freetype.FT_LOAD_RENDER | _freetype.FT_LOAD_COLOR)
+        except Exception:
+            return None
+        bm = face.glyph.bitmap
+        w, rows, pitch, mode = bm.width, bm.rows, bm.pitch, bm.pixel_mode
+        if rows == 0 or w == 0 or mode != 7:  # 7 = FT_PIXEL_MODE_BGRA (color)
+            return None
+        buf = bytes(bm.buffer)
+    if pitch != w * 4:
+        packed = bytearray()
+        for y in range(rows):
+            packed += buf[y * pitch : y * pitch + w * 4]
+        buf = bytes(packed)
+    return Image.frombytes("RGBA", (w, rows), buf, "raw", "BGRA").convert("RGB")
+
+
+def _color_emoji_image(primary: str | None, ch: str, px: int):
+    mona = _FONT_FILES.get("mona12")
+    candidates = [primary]
+    if mona is not None and mona.exists():
+        candidates.append(str(mona))
+    seen: set[str] = set()
+    for path in candidates:
+        if not path or path in seen:
+            continue
+        seen.add(path)
+        glyph = _ft_color_glyph(path, ch, px)
+        if glyph is not None:
+            return glyph
+    return None
+
+
+def _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight):
+    from PIL import Image, ImageDraw
+
+    draw = ImageDraw.Draw(image)
+    for font, ch, w in zip(fonts, chars, widths):
+        if _is_emoji(ch):
+            glyph = _color_emoji_image(primary, ch, size)
+            if glyph is not None:
+                gw, gh = max(1, round(w)), max(1, text_h)
+                image.paste(
+                    glyph.resize((gw, gh), Image.LANCZOS),
+                    (round(x), round((height - text_h) / 2)),
+                )
+                x += w
+                continue
+        if weight > 0:
+            draw.text((x, y), ch, fill=color, font=font, stroke_width=weight, stroke_fill=color)
+        else:
+            draw.text((x, y), ch, fill=color, font=font)
+        x += w
+
+
 def rasterize_text(
     text: str,
     width: int,
@@ -153,13 +236,13 @@ def rasterize_text(
     bg: RGB = (0, 0, 0),
     font_path: str | None = None,
     weight: int = 0,
+    slide: bool = False,
 ) -> Grid:
-    from PIL import Image, ImageDraw
+    from PIL import Image
 
-    image = Image.new("RGB", (width, height), bg)
     chars = [c for c in text if ord(c) not in _ZERO_WIDTH]
     if not chars:
-        return _to_grid(image, width, height)
+        return _to_grid(Image.new("RGB", (width, height), bg), width, height)
 
     primary = font_path or _default_font_path()
     pad = 2 * max(0, weight)
@@ -172,6 +255,21 @@ def rasterize_text(
         bottom = max(b[3] for b in boxes)
         return fonts, widths, sum(widths), top, bottom - top
 
+    if slide:
+        size = 6
+        fonts, widths, total, top, text_h = layout(size)
+        for candidate in range(height, 5, -1):
+            fonts, widths, total, top, text_h = layout(candidate)
+            if text_h + pad <= height:
+                size = candidate
+                break
+        canvas_w = max(width, int(round(total)) + pad)
+        image = Image.new("RGB", (canvas_w, height), bg)
+        x = (canvas_w - total) / 2 if canvas_w <= width else pad / 2
+        y = (height - text_h) / 2 - top
+        _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight)
+        return _to_grid(image, canvas_w, height)
+
     size = 6
     fonts, widths, total, top, text_h = layout(size)
     for candidate in range(height, 5, -1):
@@ -179,16 +277,10 @@ def rasterize_text(
         if total + pad <= width and text_h + pad <= height:
             size = candidate
             break
-
-    draw = ImageDraw.Draw(image)
+    image = Image.new("RGB", (width, height), bg)
     x = (width - total) / 2
     y = (height - text_h) / 2 - top
-    for font, ch, w in zip(fonts, chars, widths):
-        if weight > 0:
-            draw.text((x, y), ch, fill=color, font=font, stroke_width=weight, stroke_fill=color)
-        else:
-            draw.text((x, y), ch, fill=color, font=font)
-        x += w
+    _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight)
     return _to_grid(image, width, height)
 
 

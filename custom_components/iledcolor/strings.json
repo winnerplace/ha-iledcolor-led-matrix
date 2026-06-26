@@ -71,6 +71,7 @@
       }
     },
     "switch": {
+      "slide": { "name": "Slide (scroll long text)" },
       "flip_h": { "name": "Flip horizontal" },
       "flip_v": { "name": "Flip vertical" },
       "color_random": { "name": "Random color" }
@@ -101,7 +102,8 @@
         "text": { "name": "Text", "description": "Text to show." },
         "color": { "name": "Color", "description": "RGB color (full-color panels only)." },
         "effect": { "name": "Effect", "description": "Effect/scroll mode byte (0 = static)." },
-        "speed": { "name": "Speed", "description": "Scroll/animation speed byte." }
+        "speed": { "name": "Speed", "description": "Scroll/animation speed byte." },
+        "slide": { "name": "Slide", "description": "Keep the font size fixed and scroll long text horizontally (auto left scroll)." }
       }
     },
     "display_image": {

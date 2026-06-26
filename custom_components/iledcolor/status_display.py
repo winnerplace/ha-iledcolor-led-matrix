@@ -23,6 +23,7 @@ from .const import (
     CONF_INTERVAL,
     CONF_MODE,
     CONF_MTU,
+    CONF_SLIDE,
     CONF_SPEED,
     DEFAULT_DWELL,
     DEFAULT_EFFECT,
@@ -61,6 +62,7 @@ class StatusDisplay:
         self.color: RGB = COLOR_DEFAULT
         self.color_on = False
         self.color_random = False
+        self.slide = False
         self.last_text = ""
         self._index = 0
         self._unsub: Callable[[], None] | None = None
@@ -93,6 +95,7 @@ class StatusDisplay:
         self.color = tuple(opts.get(CONF_COLOR, COLOR_DEFAULT))  # type: ignore[assignment]
         self.color_on = bool(opts.get(CONF_COLOR_ON, False))
         self.color_random = bool(opts.get(CONF_COLOR_RANDOM, False))
+        self.slide = bool(opts.get(CONF_SLIDE, False))
         if self.enabled and not self.entities:
             _LOGGER.warning(
                 "Status display is on but no entities are selected; pick them in the "
@@ -176,6 +179,7 @@ class StatusDisplay:
                 effect=self.effect,
                 speed=self.speed,
                 dwell=self.dwell,
+                slide=self.slide,
             )
 
     async def _tick(self, _now: datetime | None = None) -> None:

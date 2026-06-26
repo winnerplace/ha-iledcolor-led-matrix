@@ -48,4 +48,5 @@ class IledColorTextEntity(TextEntity):
             effect=self._coordinator.effect,
             speed=self._coordinator.speed,
             dwell=self._coordinator.dwell,
+            slide=self._coordinator.slide,
         )

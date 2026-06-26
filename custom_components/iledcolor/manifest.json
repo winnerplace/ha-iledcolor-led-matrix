@@ -1,14 +1,14 @@
 {
   "domain": "iledcolor",
   "name": "iLEDcolor LED Matrix",
-  "version": "26.6.22",
+  "version": "26.6.23",
   "config_flow": true,
   "dependencies": ["bluetooth_adapters", "file_upload"],
   "codeowners": ["@ohilseung"],
   "documentation": "https://github.com/winnerplace/ha-iledcolor-led-matrix",
   "issue_tracker": "https://github.com/winnerplace/ha-iledcolor-led-matrix/issues",
   "iot_class": "local_push",
-  "requirements": ["bleak-retry-connector>=3.5.0", "Pillow>=10.1.0"],
+  "requirements": ["bleak-retry-connector>=3.5.0", "Pillow>=10.1.0", "freetype-py>=2.4.0"],
   "bluetooth": [
     { "service_uuid": "0000a950-0000-1000-8000-00805f9b34fb" }
   ]
