@@ -205,15 +205,11 @@ class IledColorDevice:
         gif: bool = False,
         stay: int = _GIF_STAY,
     ) -> None:
+        if not self.power_on:
+            return
         async with self._lock:
             await self._ensure()
             assert self._client is not None
-            if not self.power_on:
-                await self._client.write_gatt_char(
-                    CHAR_WRITE1, power_frame(True, app2024=self._app2024()), response=False
-                )
-                self.power_on = True
-                self._emit_power()
             mtu = (
                 int(self.entry.options.get(CONF_MTU) or 0)
                 or getattr(self._client, "mtu_size", 0)

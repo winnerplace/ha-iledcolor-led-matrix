@@ -61,6 +61,7 @@ class StatusDisplay:
         self.color: RGB = COLOR_DEFAULT
         self.color_on = False
         self.color_random = False
+        self.last_text = ""
         self._index = 0
         self._unsub: Callable[[], None] | None = None
         self._listeners: list[Callable[[], None]] = []
@@ -164,8 +165,18 @@ class StatusDisplay:
         return [self.color if self.color_on else COLOR_DEFAULT] * count
 
     async def async_refresh(self) -> None:
+        if not self.device.power_on:
+            return
         if self.enabled:
             await self._tick()
+        elif self.last_text:
+            await self.device.display_text(
+                self.last_text,
+                color=self.text_color(),
+                effect=self.effect,
+                speed=self.speed,
+                dwell=self.dwell,
+            )
 
     async def _tick(self, _now: datetime | None = None) -> None:
         if not self.device.power_on:
