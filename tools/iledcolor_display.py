@@ -76,7 +76,11 @@ def _build_grids(args):
     speed = 50
     raw_pixel = None
     if args.cmd == "text":
-        grids = [render.rasterize_text(args.text, w, h, color=args.rgb)]
+        grids = [
+            render.rasterize_text(
+                args.text, w, h, color=args.rgb, antialias=getattr(args, "antialias", False)
+            )
+        ]
     elif args.cmd == "fill":
         grids = [[[args.rgb for _ in range(w)] for _ in range(h)]]
     elif args.cmd == "image":
@@ -228,10 +232,43 @@ def _capability(adv) -> str:
     return ""
 
 
+_COMPANY = {
+    0x0006: "Microsoft",
+    0x000A: "CSR/Qualcomm",
+    0x004C: "Apple",
+    0x0059: "Nordic",
+    0x0075: "Samsung",
+    0x0087: "Garmin",
+    0x00E0: "Google",
+    0x0157: "Huami",
+    0x02E5: "Espressif",
+}
+
+
+def _mfr_hint(adv) -> str:
+    for cid in getattr(adv, "manufacturer_data", None) or {}:
+        return _COMPANY.get(cid, f"0x{cid:04X}")
+    return ""
+
+
+def rssi_key(rssi) -> int:
+    return rssi if rssi is not None else -999
+
+
+def sort_key(mfr: str, rssi):
+    return (mfr == "", mfr, -rssi_key(rssi))
+
+
+def scan_label(name: str | None, address: str, cap: str, rssi, mfr: str) -> str:
+    sig = f"{rssi:>4}dBm" if rssi is not None else "   ?dBm"
+    return f"📡 {sig}  {mfr or '알 수 없음'}  {name or '알 수 없음'}  ({address}){cap}"
+
+
 async def cmd_scan(_args):
     found = await BleakScanner.discover(timeout=6.0, return_adv=True)
-    for d, adv in found.values():
-        print(f"{d.address}  {d.name}{_capability(adv)}")
+    rows = sorted(found.values(), key=lambda p: sort_key(_mfr_hint(p[1]), getattr(p[1], "rssi", None)))
+    for d, adv in rows:
+        print(scan_label(d.name, d.address, _capability(adv), getattr(adv, "rssi", None), _mfr_hint(adv)))
 
 
 async def cmd_monitor(args):
@@ -262,6 +299,7 @@ def main():
         p = sub.add_parser(name)
         if name == "text":
             p.add_argument("text")
+            p.add_argument("--antialias", action="store_true")
         if name in ("image", "gif"):
             p.add_argument("path")
             p.add_argument("--fit", choices=["contain", "cover", "stretch"], default="contain")

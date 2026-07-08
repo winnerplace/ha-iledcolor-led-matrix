@@ -73,6 +73,7 @@
     },
     "switch": {
       "slide": { "name": "Slide (scroll long text)" },
+      "antialias": { "name": "Antialiasing (smooth text)" },
       "flip_h": { "name": "Flip horizontal" },
       "flip_v": { "name": "Flip vertical" },
       "color_random": { "name": "Random color" }

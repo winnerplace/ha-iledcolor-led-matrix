@@ -115,6 +115,24 @@ def test_plain_text_is_monochrome():
     assert not _chroma(grid)
 
 
+def _levels(grid):
+    return {v for row in grid for px in row for v in px}
+
+
+def test_text_sharp_by_default():
+    if not _HAVE_PIL:
+        return
+    grid = render.rasterize_text("안녕", 96, 16)
+    assert _levels(grid) == {0, 255}
+
+
+def test_text_antialias_option():
+    if not _HAVE_PIL:
+        return
+    grid = render.rasterize_text("안녕", 96, 16, antialias=True)
+    assert _levels(grid) - {0, 255}
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:

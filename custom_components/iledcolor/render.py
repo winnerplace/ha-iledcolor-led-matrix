@@ -205,10 +205,12 @@ def _color_emoji_image(primary: str | None, ch: str, px: int):
     return None
 
 
-def _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight):
+def _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight, antialias):
     from PIL import Image, ImageDraw
 
     draw = ImageDraw.Draw(image)
+    if not antialias:
+        draw.fontmode = "1"
     for font, ch, w in zip(fonts, chars, widths):
         if _is_emoji(ch):
             glyph = _color_emoji_image(primary, ch, size)
@@ -220,10 +222,11 @@ def _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary,
                 )
                 x += w
                 continue
+        pos = (x, y) if antialias else (round(x), round(y))
         if weight > 0:
-            draw.text((x, y), ch, fill=color, font=font, stroke_width=weight, stroke_fill=color)
+            draw.text(pos, ch, fill=color, font=font, stroke_width=weight, stroke_fill=color)
         else:
-            draw.text((x, y), ch, fill=color, font=font)
+            draw.text(pos, ch, fill=color, font=font)
         x += w
 
 
@@ -238,6 +241,7 @@ def rasterize_text(
     weight: int = 0,
     slide: bool = False,
     text_height: int = 0,
+    antialias: bool = False,
 ) -> Grid:
     from PIL import Image
 
@@ -269,7 +273,7 @@ def rasterize_text(
         image = Image.new("RGB", (canvas_w, height), bg)
         x = (canvas_w - total) / 2 if canvas_w <= width else pad / 2
         y = (height - text_h) / 2 - top
-        _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight)
+        _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight, antialias)
         return _to_grid(image, canvas_w, height)
 
     size = 6
@@ -282,7 +286,7 @@ def rasterize_text(
     image = Image.new("RGB", (width, height), bg)
     x = (width - total) / 2
     y = (height - text_h) / 2 - top
-    _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight)
+    _draw_run(image, fonts, chars, widths, x, y, text_h, height, color, primary, size, weight, antialias)
     return _to_grid(image, width, height)
 
 

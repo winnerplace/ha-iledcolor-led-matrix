@@ -17,6 +17,7 @@ from .const import (
     CHAR_NOTIFY,
     CHAR_WRITE1,
     CHAR_WRITE2,
+    CONF_ANTIALIAS,
     CONF_COLOR_TYPE,
     CONF_FLIP_H,
     CONF_FLIP_V,
@@ -259,9 +260,13 @@ class IledColorDevice:
     def _weight(self) -> int:
         return int(self.entry.options.get(CONF_WEIGHT, 0))
 
+    def _antialias(self) -> bool:
+        return bool(self.entry.options.get(CONF_ANTIALIAS, False))
+
     def _text_frame(self, text: str, w: int, h: int, color: RGB) -> bytes:
         grid = render.rasterize_text(
-            text, w, h, color=color, font_path=self._font_path(), weight=self._weight()
+            text, w, h, color=color, font_path=self._font_path(), weight=self._weight(),
+            antialias=self._antialias(),
         )
         return self._encode(grid, w, h)
 
@@ -271,7 +276,7 @@ class IledColorDevice:
     def _slide_frames(self, text: str, w: int, h: int, color: RGB) -> tuple[list[bytes], int]:
         grid = render.rasterize_text(
             text, w, h, color=color, font_path=self._font_path(), weight=self._weight(),
-            slide=True, text_height=self._text_height(),
+            slide=True, text_height=self._text_height(), antialias=self._antialias(),
         )
         natural = len(grid[0])
         if natural <= w:
@@ -293,10 +298,12 @@ class IledColorDevice:
     ) -> list[bytes]:
         font = self._font_path()
         weight = self._weight()
+        antialias = self._antialias()
         return [
             self._encode(
                 render.rasterize_text(
-                    t, w, h, color=(colors[i] if colors else color), font_path=font, weight=weight
+                    t, w, h, color=(colors[i] if colors else color), font_path=font,
+                    weight=weight, antialias=antialias,
                 ),
                 w,
                 h,

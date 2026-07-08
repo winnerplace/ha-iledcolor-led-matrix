@@ -73,6 +73,7 @@
     },
     "switch": {
       "slide": { "name": "슬라이드 (긴 글 흐름)" },
+      "antialias": { "name": "안티앨리어싱 (부드러운 글자)" },
       "flip_h": { "name": "좌우 반전" },
       "flip_v": { "name": "상하 반전" },
       "color_random": { "name": "랜덤 색상" }

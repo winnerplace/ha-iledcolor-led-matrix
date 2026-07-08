@@ -34,6 +34,9 @@ render = ildisp.render
 WRITE1, WRITE2, NOTIFY = ildisp.WRITE1, ildisp.WRITE2, ildisp.NOTIFY
 NAME_HINT = ildisp.NAME_HINT
 
+_mfr_hint = ildisp._mfr_hint
+
+
 EFFECTS = [
     ("정지", 0),
     ("좌 ←", 1),
@@ -82,8 +85,9 @@ class BleWorker:
         rows = []
         for dev, adv in found.values():
             name = dev.name or ""
-            rows.append((dev, name, ildisp._capability(adv)))
-        rows.sort(key=lambda r: (NAME_HINT not in (r[1] or "").lower(), r[1] or ""))
+            rssi = getattr(adv, "rssi", None)
+            rows.append((dev, name, ildisp._capability(adv), rssi, _mfr_hint(adv)))
+        rows.sort(key=lambda r: ildisp.sort_key(r[4], r[3]))
         return rows
 
     async def _ensure(self):
@@ -201,6 +205,7 @@ class App:
     def _build(self):
         self.root.geometry("760x880")
         self.root.minsize(680, 720)
+        self.root.option_add("*TCombobox*Listbox.font", ("Menlo", 11))
         style = ttk.Style()
         style.configure("Card.TLabelframe", padding=12)
         style.configure("Card.TLabelframe.Label", font=("", 12, "bold"))
@@ -212,7 +217,10 @@ class App:
         self.status_var = tk.StringVar(value="🔴 연결 안 됨")
         ttk.Label(conn, textvariable=self.status_var, width=16, anchor="w").grid(row=0, column=0, sticky="w")
         self.dev_var = tk.StringVar()
-        self.dev_cb = ttk.Combobox(conn, textvariable=self.dev_var, state="readonly")
+        self.dev_cb = ttk.Combobox(
+            conn, textvariable=self.dev_var, state="readonly", width=46,
+            font=("Menlo", 11),
+        )
         self.dev_cb.grid(row=0, column=1, sticky="we", padx=6)
         self.dev_cb.bind("<<ComboboxSelected>>", lambda _e: self._refresh_buttons())
         self.scan_btn = ttk.Button(conn, text="스캔", command=self.on_scan)
@@ -262,6 +270,9 @@ class App:
                      values=["window", "nowait", "ackwait"]).pack(side="left")
         ttk.Label(md, text="win").pack(side="left", padx=(14, 4))
         ttk.Entry(md, textvariable=self.win_var, width=5).pack(side="left")
+        self.text_aa = tk.BooleanVar(value=False)
+        aa = self._row(common, 4, "글자 표시")
+        ttk.Checkbutton(aa, text="안티앨리어싱 (부드러운 테두리)", variable=self.text_aa).pack(side="left")
 
         prev = ttk.LabelFrame(self.root, text="미리보기", style="Card.TLabelframe")
         prev.pack(fill="x", padx=14, pady=6)
@@ -406,7 +417,7 @@ class App:
             rows = []
             self._enqueue(f"scan error: {err}")
         self.devices = rows
-        labels = [f"{name or '(이름 없음)'}  {dev.address}{cap}" for dev, name, cap in rows]
+        labels = [ildisp.scan_label(name, dev.address, cap, rssi, mfr) for dev, name, cap, rssi, mfr in rows]
         self.root.after(0, lambda: self._fill_devices(labels))
 
     def _fill_devices(self, labels):
@@ -470,7 +481,10 @@ class App:
         return SimpleNamespace(**base)
 
     def _args_text(self):
-        return self._common("text", text=self.text_var.get(), rgb=self.text_color["rgb"])
+        return self._common(
+            "text", text=self.text_var.get(), rgb=self.text_color["rgb"],
+            antialias=self.text_aa.get(),
+        )
 
     def _args_image(self):
         if not self.img_path.get():
