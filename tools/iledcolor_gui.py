@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import os
 import pathlib
 import queue
 import threading
@@ -311,6 +312,38 @@ class App:
         cell.grid(row=r, column=1, sticky="w", pady=6)
         return cell
 
+    def _font_index(self):
+        labels: dict[str, str] = {}
+        order: list[str] = []
+        for name, path in render._FONT_FILES.items():
+            if path.exists():
+                label = f"내장 · {name}"
+                labels[label] = str(path)
+                order.append(label)
+        sys_dirs = [
+            "/System/Library/Fonts",
+            "/System/Library/Fonts/Supplemental",
+            "/Library/Fonts",
+            os.path.expanduser("~/Library/Fonts"),
+        ]
+        seen: set[str] = set()
+        found: list[tuple[str, str]] = []
+        for d in sys_dirs:
+            if not os.path.isdir(d):
+                continue
+            for fn in sorted(os.listdir(d)):
+                if not fn.lower().endswith((".ttf", ".ttc", ".otf")):
+                    continue
+                stem = os.path.splitext(fn)[0]
+                if stem in seen:
+                    continue
+                seen.add(stem)
+                found.append((stem, os.path.join(d, fn)))
+        for stem, path in sorted(found, key=lambda t: t[0].lower()):
+            labels[stem] = path
+            order.append(stem)
+        return labels, order
+
     def _pane_text(self, f):
         f.columnconfigure(1, weight=1)
         ttk.Label(f, text="문구").grid(row=0, column=0, sticky="w", pady=6)
@@ -318,8 +351,17 @@ class App:
         ttk.Entry(f, textvariable=self.text_var).grid(row=0, column=1, sticky="we", padx=6)
         self.text_color_btn, self.text_color = self._color_btn(f)
         self.text_color_btn.grid(row=0, column=2, padx=4)
+        ttk.Label(f, text="폰트").grid(row=1, column=0, sticky="w", pady=6)
+        self.font_labels, font_order = self._font_index()
+        self.font_var = tk.StringVar()
+        self.font_cb = ttk.Combobox(f, textvariable=self.font_var, state="readonly",
+                                    values=font_order, height=20)
+        self.font_cb.grid(row=1, column=1, sticky="we", padx=6)
+        if font_order:
+            self.font_cb.current(0)
+        self.font_cb.bind("<<ComboboxSelected>>", lambda _e: self.preview_text())
         bar = ttk.Frame(f)
-        bar.grid(row=1, column=1, sticky="w", padx=6, pady=(12, 0))
+        bar.grid(row=2, column=1, sticky="w", padx=6, pady=(12, 0))
         ttk.Button(bar, text="미리보기", command=self.preview_text).pack(side="left")
         sb = ttk.Button(bar, text="전송", style="Send.TButton", command=self.send_text)
         sb.pack(side="left", padx=6)
@@ -484,6 +526,7 @@ class App:
         return self._common(
             "text", text=self.text_var.get(), rgb=self.text_color["rgb"],
             antialias=self.text_aa.get(),
+            font_path=self.font_labels.get(self.font_var.get()),
         )
 
     def _args_image(self):

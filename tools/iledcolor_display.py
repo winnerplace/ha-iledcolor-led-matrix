@@ -71,6 +71,18 @@ def _reorder(grids, order):
     return [[[(px[p[0]], px[p[1]], px[p[2]]) for px in row] for row in g] for g in grids]
 
 
+def _resolve_font(args):
+    font_path = getattr(args, "font_path", None)
+    if font_path:
+        return font_path
+    name = getattr(args, "font", None)
+    if not name:
+        return None
+    if pathlib.Path(name).exists():
+        return name
+    return render.font_file(name)
+
+
 def _build_grids(args):
     w, h = args.w, args.h
     speed = 50
@@ -78,7 +90,8 @@ def _build_grids(args):
     if args.cmd == "text":
         grids = [
             render.rasterize_text(
-                args.text, w, h, color=args.rgb, antialias=getattr(args, "antialias", False)
+                args.text, w, h, color=args.rgb, font_path=_resolve_font(args),
+                antialias=getattr(args, "antialias", False),
             )
         ]
     elif args.cmd == "fill":
@@ -299,6 +312,7 @@ def main():
         p = sub.add_parser(name)
         if name == "text":
             p.add_argument("text")
+            p.add_argument("--font", default=None, help="bundled font name or path")
             p.add_argument("--antialias", action="store_true")
         if name in ("image", "gif"):
             p.add_argument("path")

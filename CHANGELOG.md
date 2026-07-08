@@ -4,6 +4,15 @@
 
 버전 체계는 `YY.M.PATCH`이며 릴리즈마다 PATCH를 1씩 올린다. manifest `version`, git 태그, GitHub 릴리즈가 항상 동일해야 한다. 자세한 규칙은 [CLAUDE.md](CLAUDE.md) 참고.
 
+## [26.7.2] - 2026-07-08
+
+### Added
+- **폰트 4종 추가** — 기기 설정 폰트 선택에서 고를 수 있다. 모두 오픈 라이선스라 HA Green(HAOS) 등 시스템 폰트가 없는 환경에서도 번들로 동작한다.
+  - **네오둥근모(NeoDunggeunmo)** — 픽셀 도트 글꼴. LED 격자 픽셀과 잘 맞음. (SIL OFL 1.1)
+  - **Pretendard GOV Bold** — 정부 표준 변형의 굵은 프리텐다드. (SIL OFL 1.1)
+  - **나눔고딕 / 나눔명조(Nanum Gothic / Nanum Myeongjo)** — 고딕·명조 대표 오픈 글꼴. (SIL OFL 1.1) AppleGothic·AppleMyungjo는 Apple 독점 폰트라 공개 배포에 번들할 수 없어 같은 계열의 오픈 폰트로 대체했다.
+- **GUI 폰트 확인 기능** (`tools/iledcolor_gui.py`) — 텍스트 탭에 폰트 선택 콤보박스 추가. 내장 폰트뿐 아니라 macOS 시스템 폰트(`/System/Library/Fonts` 등, AppleGothic·AppleMyungjo 포함)까지 골라 미리보기로 바로 확인할 수 있다. 폰트를 바꾸면 미리보기가 자동 갱신된다. CLI(`iledcolor_display.py text`)에도 `--font`(내장 이름 또는 경로) 옵션 추가.
+
 ## [26.7.1] - 2026-07-08
 
 ### Fixed

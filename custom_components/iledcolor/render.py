@@ -99,6 +99,10 @@ _FONT_FILES = {
     "cafe24ssurround": _FONTS_DIR / "Cafe24Ssurround.ttf",
     "cafe24ssurroundair": _FONTS_DIR / "Cafe24SsurroundAir.ttf",
     "mona12": _FONTS_DIR / "Mona12.ttf",
+    "neodgm": _FONTS_DIR / "NeoDGM.ttf",
+    "pretendardgov": _FONTS_DIR / "PretendardGOV-Bold.otf",
+    "nanumgothic": _FONTS_DIR / "NanumGothic.ttf",
+    "nanummyeongjo": _FONTS_DIR / "NanumMyeongjo.ttf",
 }
 
 

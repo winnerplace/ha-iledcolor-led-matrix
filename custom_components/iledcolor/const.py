@@ -56,6 +56,10 @@ FONT_OPTIONS = [
     "cafe24ssurround",
     "cafe24ssurroundair",
     "mona12",
+    "neodgm",
+    "pretendardgov",
+    "nanumgothic",
+    "nanummyeongjo",
 ]
 
 CONF_WEIGHT = "weight"
