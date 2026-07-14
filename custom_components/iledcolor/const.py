@@ -27,6 +27,7 @@ CONF_ENABLED = "enabled"
 
 CONF_ROW_FORMAT = "row_format"
 ROW_FORMAT_DEFAULT = "{area} {name} {value}{unit}"
+CONF_CUSTOM_TEXTS = "custom_texts"
 
 CONF_MODE = "mode"
 MODE_STATUS = "status"

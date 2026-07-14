@@ -26,6 +26,7 @@
         "description": "Pick the entities to rotate on the matrix. Row format tokens: {area} area, {name} entity name, {value} state, {unit} unit — e.g. `{area} {value}{unit}`. Panel size / font / color type / frame generation are set from the device settings.",
         "data": {
           "entities": "Entities to display",
+        "custom_texts": "Custom text rows (shown after entity rows)",
         "row_format": "Row format ({area} {name} {value} {unit})"
         }
       }

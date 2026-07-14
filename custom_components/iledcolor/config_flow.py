@@ -19,6 +19,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_CAPABILITY,
+    CONF_CUSTOM_TEXTS,
     CONF_ENTITIES,
     CONF_ROW_FORMAT,
     DOMAIN,
@@ -135,6 +136,11 @@ class IledColorOptionsFlow(OptionsFlow):
                             reorder=True,
                             domain=["sensor", "binary_sensor", "weather", "climate"],
                         )
+                    ),
+                    vol.Optional(
+                        CONF_CUSTOM_TEXTS, default=opts.get(CONF_CUSTOM_TEXTS, [])
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(multiple=True)
                     ),
                     vol.Optional(
                         CONF_ROW_FORMAT,

@@ -23,6 +23,7 @@ from .const import (
     CONF_COLOR_ON,
     CONF_COLOR_RANDOM,
     CONF_COLOR_TYPE,
+    CONF_CUSTOM_TEXTS,
     CONF_DWELL,
     CONF_EFFECT,
     CONF_ENABLED,
@@ -72,6 +73,7 @@ class StatusDisplay:
         self.mode = MODE_TEXT
         self.enabled = False
         self.entities: list[str] = []
+        self.custom_texts: list[str] = []
         self.effect = DEFAULT_EFFECT
         self.speed = DEFAULT_SPEED
         self.dwell = DEFAULT_DWELL
@@ -108,6 +110,7 @@ class StatusDisplay:
         self.mode = mode
         self.enabled = mode == MODE_STATUS
         self.entities = list(opts.get(CONF_ENTITIES, []))
+        self.custom_texts = [t.strip() for t in opts.get(CONF_CUSTOM_TEXTS, []) if t.strip()]
         self.effect = int(opts.get(CONF_EFFECT, DEFAULT_EFFECT))
         self.speed = int(opts.get(CONF_SPEED, DEFAULT_SPEED))
         self.dwell = int(opts.get(CONF_DWELL, DEFAULT_DWELL))
@@ -117,7 +120,7 @@ class StatusDisplay:
         self.color_random = bool(opts.get(CONF_COLOR_RANDOM, False))
         self.slide = bool(opts.get(CONF_SLIDE, False))
         self.row_format = str(opts.get(CONF_ROW_FORMAT) or ROW_FORMAT_DEFAULT)
-        if self.enabled and not self.entities:
+        if self.enabled and not (self.entities or self.custom_texts):
             _LOGGER.warning(
                 "Status display is on but no entities are selected; pick them in the "
                 "integration options (Settings > Devices & Services > iLEDcolor > Configure)"
@@ -133,7 +136,7 @@ class StatusDisplay:
         if self._unsub is not None:
             self._unsub()
             self._unsub = None
-        if self.enabled and self.entities and self.interval > 0:
+        if self.enabled and (self.entities or self.custom_texts) and self.interval > 0:
             self._unsub = async_track_time_interval(
                 self.hass, self._tick, timedelta(seconds=self.interval)
             )
@@ -163,6 +166,7 @@ class StatusDisplay:
             row = self._format_row(area, name, value, unit)
             if row:
                 rows.append(row)
+        rows.extend(self.custom_texts)
         return rows
 
     async def _load_translations(self) -> None:
