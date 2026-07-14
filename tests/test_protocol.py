@@ -57,6 +57,30 @@ def test_power_frame_legacy_vs_app2024():
     assert protocol.power_frame(True, app2024=True) == bulk.simple_frame(0x0A, [1] + [0] * 17)
 
 
+def test_classify_notify_chunk_ack_ok():
+    frame = bytes([0x54, 0x00, 0x00, 0x07, 0, 0, 0, 1, 0x01, 0x00, 0x5D])
+    assert protocol.classify_notify(frame) == (0x00, 0x01)
+
+
+def test_classify_notify_chunk_ack_error():
+    frame = bytes([0x54, 0x00, 0x00, 0x07, 0, 0, 0, 1, 0x03, 0x00, 0x5F])
+    op, status = protocol.classify_notify(frame)
+    assert op == 0x00
+    assert status in protocol.BULK_ACK_ERRORS
+
+
+def test_classify_notify_program_unchanged():
+    frame = bytes([0x54, 0x06, 0x00, 0x03, 0x03, 0x00, 0x60])
+    assert protocol.classify_notify(frame) == (0x06, protocol.PROGRAM_STATUS_UNCHANGED)
+
+
+def test_classify_notify_rejects_short_or_foreign():
+    assert protocol.classify_notify(b"") is None
+    assert protocol.classify_notify(bytes([0x54, 0x06, 0x00, 0x03])) is None
+    assert protocol.classify_notify(bytes([0x54, 0x00, 0x00, 0x03, 0x01, 0x00, 0x58])) is None
+    assert protocol.classify_notify(bytes([0xA8, 0x00, 0x00, 0x03, 0x01, 0x00, 0xAC])) is None
+
+
 def test_brightness_frame_legacy_vs_app2024():
     assert protocol.brightness_frame(5) == bulk.simple_frame(0x09, [10 - 5, 0])
     assert protocol.brightness_frame(5, app2024=True) == bulk.simple_frame(0x09, [11 - 5] + [0] * 17)

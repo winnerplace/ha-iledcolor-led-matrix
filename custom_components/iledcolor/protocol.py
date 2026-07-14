@@ -3,10 +3,26 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .bulk import simple_frame as build_frame
-from .const import DEVICE_MARKER, OP_BRIGHTNESS, OP_POWER
+from .const import DEVICE_MARKER, FRAME_HEADER, OP_BRIGHTNESS, OP_BULK_CHUNK, OP_POWER
 
 __all__ = ["build_frame", "power_frame", "brightness_frame", "Capability",
-           "find_capability_blob", "parse_capability"]
+           "find_capability_blob", "parse_capability", "classify_notify",
+           "BULK_ACK_ERRORS", "PROGRAM_STATUS_NO_SPACE", "PROGRAM_STATUS_UNCHANGED"]
+
+BULK_ACK_ERRORS = frozenset({0x00, 0x02, 0x03})
+PROGRAM_STATUS_NO_SPACE = 2
+PROGRAM_STATUS_UNCHANGED = 3
+
+
+def classify_notify(data: bytes) -> tuple[int, int] | None:
+    if len(data) < 5 or data[0] != FRAME_HEADER:
+        return None
+    op = data[1]
+    if op == OP_BULK_CHUNK:
+        if len(data) <= 8:
+            return None
+        return op, data[8]
+    return op, data[4]
 
 
 def power_frame(on: bool, app2024: bool = False) -> bytes:

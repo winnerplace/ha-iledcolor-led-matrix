@@ -74,6 +74,7 @@ class StatusDisplay:
         self._unsub: Callable[[], None] | None = None
         self._listeners: list[Callable[[], None]] = []
         self._warned = False
+        self._last_sig: tuple | None = None
         self.apply_options()
 
     def add_listener(self, cb: Callable[[], None]) -> Callable[[], None]:
@@ -102,6 +103,7 @@ class StatusDisplay:
         self.color_on = bool(opts.get(CONF_COLOR_ON, False))
         self.color_random = bool(opts.get(CONF_COLOR_RANDOM, False))
         self.slide = bool(opts.get(CONF_SLIDE, False))
+        self._last_sig = None
         if self.enabled and not self.entities:
             _LOGGER.warning(
                 "Status display is on but no entities are selected; pick them in the "
@@ -216,20 +218,35 @@ class StatusDisplay:
             return [_random_color() for _ in range(count)]
         return [self.color if self.color_on else COLOR_DEFAULT] * count
 
+    def _sig(self, *parts) -> tuple | None:
+        if self.color_random:
+            return None
+        return (*parts, self.effect, self.speed, self.dwell, self.device.connect_epoch)
+
     async def async_refresh(self) -> None:
         if not self.device.power_on:
             return
         if self.enabled:
             await self._tick()
         elif self.last_text:
-            await self.device.display_text(
-                self.last_text,
-                color=self.text_color(),
-                effect=self.effect,
-                speed=self.speed,
-                dwell=self.dwell,
-                slide=self.slide,
-            )
+            await self.async_show_text(self.last_text)
+
+    async def async_show_text(self, value: str) -> None:
+        self.last_text = value
+        if not self.device.power_on:
+            return
+        sig = self._sig("text", value, self.text_color(), self.slide)
+        if sig is not None and sig == self._last_sig:
+            return
+        await self.device.display_text(
+            value,
+            color=self.text_color(),
+            effect=self.effect,
+            speed=self.speed,
+            dwell=self.dwell,
+            slide=self.slide,
+        )
+        self._last_sig = sig
 
     async def _tick(self, _now: datetime | None = None) -> None:
         if not self.device.power_on:
@@ -238,14 +255,19 @@ class StatusDisplay:
         rows = self._rows()
         if not rows:
             return
+        colors = self.colors_for(len(rows))
+        sig = self._sig("status", tuple(rows), tuple(colors))
+        if sig is not None and sig == self._last_sig:
+            return
         try:
             await self.device.display_status(
                 rows,
-                colors=self.colors_for(len(rows)),
+                colors=colors,
                 effect=self.effect,
                 speed=self.speed,
                 dwell=self.dwell,
             )
+            self._last_sig = sig
             self._warned = False
         except Exception as err:  # noqa: BLE001
             if not self._warned:

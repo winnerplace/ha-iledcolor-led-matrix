@@ -64,8 +64,10 @@ class IledColorLight(LightEntity, RestoreEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         if (brightness := kwargs.get(ATTR_BRIGHTNESS)) is not None:
-            await self._device.set_brightness_level(max(1, round(brightness / 255 * 10)))
-            self._attr_brightness = brightness
+            self._attr_brightness = int(brightness)
+        await self._device.set_brightness_level(
+            max(1, round((self._attr_brightness or 255) / 255 * 10))
+        )
         await self._device.set_power(True)
         await self._coordinator.async_refresh()
 

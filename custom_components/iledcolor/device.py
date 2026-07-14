@@ -31,9 +31,21 @@ from .const import (
     DOMAIN,
     GEN_APP2024,
     GEN_LEGACY,
+    OP_BULK_CHUNK,
+    OP_BULK_END,
+    OP_PROGRAM,
     TEXT_HEIGHT_DEFAULT,
 )
-from .protocol import Capability, brightness_frame, build_frame, power_frame
+from .protocol import (
+    BULK_ACK_ERRORS,
+    PROGRAM_STATUS_NO_SPACE,
+    PROGRAM_STATUS_UNCHANGED,
+    Capability,
+    brightness_frame,
+    build_frame,
+    classify_notify,
+    power_frame,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,7 +55,12 @@ _ACK_GIVE_UP = 3
 _WINDOW = 32
 _GIF_STAY = 10
 _MAX_PANEL = 1024
+_RESP_TIMEOUT = 1.0
 RGB = tuple[int, int, int]
+
+
+class BulkTransferError(RuntimeError):
+    pass
 
 
 def gif_speed(delays_ms: list[int]) -> int:
@@ -61,12 +78,16 @@ class IledColorDevice:
         self.capability = capability
         self.last_notify: bytes | None = None
         self.power_on = False
+        self.connect_epoch = 0
         self._client: BleakClientWithServiceCache | None = None
         self._lock = asyncio.Lock()
         self._listeners: list[Callable[[bytes], None]] = []
         self._power_listeners: list[Callable[[], None]] = []
         self._ack = asyncio.Event()
         self._acks = 0
+        self._bulk_error: int | None = None
+        self._resp: dict[int, int] = {}
+        self._resp_event = asyncio.Event()
 
     @property
     def connected(self) -> bool:
@@ -116,6 +137,14 @@ class IledColorDevice:
         self.last_notify = bytes(data)
         _LOGGER.debug("%s notify <- %s", self.address, self.last_notify.hex())
         if data:
+            op_status = classify_notify(self.last_notify)
+            if op_status is not None:
+                op, status = op_status
+                if op == OP_BULK_CHUNK and status in BULK_ACK_ERRORS:
+                    self._bulk_error = status
+                elif op in (OP_BULK_END, OP_PROGRAM):
+                    self._resp[op] = status
+                    self._resp_event.set()
             self._acks += 1
             self._ack.set()
         for cb in list(self._listeners):
@@ -139,6 +168,7 @@ class IledColorDevice:
             self.address,
             disconnected_callback=self._on_disconnect,
         )
+        self.connect_epoch += 1
         try:
             assert self._client is not None
             await self._client.start_notify(CHAR_NOTIFY, self._on_notify)
@@ -182,9 +212,14 @@ class IledColorDevice:
     async def _stream(self, chunks: list[bytes], char: str) -> None:
         assert self._client is not None
         self._acks = 0
+        self._bulk_error = None
         throttle = True
         misses = 0
         for index, chunk in enumerate(chunks):
+            if self._bulk_error is not None:
+                raise BulkTransferError(
+                    f"device aborted transfer (status 0x{self._bulk_error:02x})"
+                )
             while throttle and index - self._acks >= _WINDOW:
                 self._ack.clear()
                 try:
@@ -196,6 +231,16 @@ class IledColorDevice:
                         throttle = False
                         _LOGGER.debug("%s no chunk ACK; streaming remainder", self.address)
             await self._client.write_gatt_char(char, chunk, response=False)
+
+    async def _wait_resp(self, op: int, timeout: float) -> int | None:
+        try:
+            async with asyncio.timeout(timeout):
+                while op not in self._resp:
+                    self._resp_event.clear()
+                    await self._resp_event.wait()
+        except TimeoutError:
+            return None
+        return self._resp.pop(op)
 
     async def _send_source(
         self,
@@ -239,8 +284,18 @@ class IledColorDevice:
                 text_data = bulk.legacy_source(params, b"".join(frames))
             header = bulk.legacy_header_frame(text_data)
             chunks = bulk.legacy_bulk_frames(text_data, mtu)
+            self._resp.clear()
             await self._client.write_gatt_char(CHAR_WRITE1, header, response=False)
+            status = await self._wait_resp(OP_PROGRAM, _RESP_TIMEOUT)
+            if status == PROGRAM_STATUS_UNCHANGED:
+                _LOGGER.info("%s content unchanged on device; bulk skipped", self.address)
+                return
+            if status == PROGRAM_STATUS_NO_SPACE:
+                raise BulkTransferError("device storage full")
             await self._stream(chunks, CHAR_WRITE2)
+            end = await self._wait_resp(OP_BULK_END, _RESP_TIMEOUT)
+            if end is not None and end != 1:
+                _LOGGER.warning("%s device reported transfer failure (status %s)", self.address, end)
             _LOGGER.info(
                 "%s sent legacy (%d frames, %dB, %d chunks, mtu=%d) in %.2fs",
                 self.address, len(frames), len(text_data), len(chunks), mtu, time.monotonic() - t0,

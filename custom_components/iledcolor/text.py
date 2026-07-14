@@ -39,14 +39,4 @@ class IledColorTextEntity(TextEntity):
         self.async_write_ha_state()
         if self._coordinator.mode != MODE_TEXT:
             await self._coordinator.async_set(**{CONF_MODE: MODE_TEXT})
-        self._coordinator.last_text = value
-        if not self._device.power_on:
-            return
-        await self._device.display_text(
-            value,
-            color=self._coordinator.text_color(),
-            effect=self._coordinator.effect,
-            speed=self._coordinator.speed,
-            dwell=self._coordinator.dwell,
-            slide=self._coordinator.slide,
-        )
+        await self._coordinator.async_show_text(value)
