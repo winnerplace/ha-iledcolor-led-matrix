@@ -7,7 +7,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
-from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    entity_registry as er,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import CHAR_WRITE1, CHAR_WRITE2, CONF_CAPABILITY, CONF_ENTITIES, DOMAIN
@@ -97,6 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if bluetooth.async_ble_device_from_address(hass, address, connectable=True) is None:
         raise ConfigEntryNotReady(f"{address} not found")
 
+    _remove_stale_entities(hass, entry, address)
     capability = _reparse_capability(hass, entry, address)
     device = IledColorDevice(hass, entry, capability)
     coordinator = StatusDisplay(hass, entry, device)
@@ -109,6 +114,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     _register_services(hass)
     return True
+
+
+def _remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry, address: str) -> None:
+    base = entry.unique_id or address
+    ent_reg = er.async_get(hass)
+    stale = ent_reg.async_get_entity_id("text", DOMAIN, f"{base}_status_entities")
+    if stale:
+        ent_reg.async_remove(stale)
 
 
 def _reparse_capability(hass: HomeAssistant, entry: ConfigEntry, address: str) -> Capability:

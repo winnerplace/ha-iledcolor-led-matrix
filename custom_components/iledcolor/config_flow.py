@@ -20,7 +20,9 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_CAPABILITY,
     CONF_ENTITIES,
+    CONF_ROW_FORMAT,
     DOMAIN,
+    ROW_FORMAT_DEFAULT,
     SERVICE_UUID,
 )
 from .protocol import find_capability_blob, parse_capability
@@ -134,6 +136,10 @@ class IledColorOptionsFlow(OptionsFlow):
                             domain=["sensor", "binary_sensor", "weather", "climate"],
                         )
                     ),
+                    vol.Optional(
+                        CONF_ROW_FORMAT,
+                        default=opts.get(CONF_ROW_FORMAT, ROW_FORMAT_DEFAULT),
+                    ): selector.TextSelector(),
                 }
             ),
         )

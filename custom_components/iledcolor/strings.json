@@ -23,9 +23,10 @@
     "step": {
       "init": {
         "title": "Status display",
-        "description": "Pick the entities to rotate on the matrix. Panel size / font / color type / frame generation are set from the device settings.",
+        "description": "Pick the entities to rotate on the matrix. Row format tokens: {area} area, {name} entity name, {value} state, {unit} unit — e.g. `{area} {value}{unit}`. Panel size / font / color type / frame generation are set from the device settings.",
         "data": {
-          "entities": "Entities to display"
+          "entities": "Entities to display",
+        "row_format": "Row format ({area} {name} {value} {unit})"
         }
       }
     }
@@ -82,8 +83,7 @@
       "color_random": { "name": "Random color" }
     },
     "text": {
-      "display_text": { "name": "Display text" },
-      "status_entities": { "name": "Status display entities" }
+      "display_text": { "name": "Display text" }
     }
   },
   "services": {

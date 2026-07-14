@@ -35,6 +35,7 @@ from .const import (
     CONF_INTERVAL,
     CONF_MODE,
     CONF_MTU,
+    CONF_ROW_FORMAT,
     CONF_SLIDE,
     CONF_SPEED,
     CONF_TEXT_HEIGHT,
@@ -46,6 +47,7 @@ from .const import (
     DEFAULT_SPEED,
     MODE_STATUS,
     MODE_TEXT,
+    ROW_FORMAT_DEFAULT,
 )
 from .device import IledColorDevice
 
@@ -78,6 +80,7 @@ class StatusDisplay:
         self.color_on = False
         self.color_random = False
         self.slide = False
+        self.row_format = ROW_FORMAT_DEFAULT
         self.last_text = ""
         self._translations: dict[str, str] = {}
         self._index = 0
@@ -113,6 +116,7 @@ class StatusDisplay:
         self.color_on = bool(opts.get(CONF_COLOR_ON, False))
         self.color_random = bool(opts.get(CONF_COLOR_RANDOM, False))
         self.slide = bool(opts.get(CONF_SLIDE, False))
+        self.row_format = str(opts.get(CONF_ROW_FORMAT) or ROW_FORMAT_DEFAULT)
         if self.enabled and not self.entities:
             _LOGGER.warning(
                 "Status display is on but no entities are selected; pick them in the "
@@ -134,6 +138,17 @@ class StatusDisplay:
                 self.hass, self._tick, timedelta(seconds=self.interval)
             )
 
+    def _format_row(self, area: str, name: str, value: str, unit: str) -> str:
+        row = self.row_format
+        for token, part in (
+            ("{area}", area),
+            ("{name}", name),
+            ("{value}", value),
+            ("{unit}", unit),
+        ):
+            row = row.replace(token, part)
+        return " ".join(row.split())
+
     def _rows(self) -> list[str]:
         rows: list[str] = []
         for entity_id in self.entities:
@@ -145,8 +160,9 @@ class StatusDisplay:
             unit = state.attributes.get("unit_of_measurement", "")
             area = self._area_name(entity_id)
             value = self._localized_state(entity_id, state)
-            parts = [p for p in (area, name, f"{value}{unit}") if p]
-            rows.append(" ".join(parts))
+            row = self._format_row(area, name, value, unit)
+            if row:
+                rows.append(row)
         return rows
 
     async def _load_translations(self) -> None:

@@ -23,9 +23,10 @@
     "step": {
       "init": {
         "title": "상태표시",
-        "description": "매트릭스에 순환 표시할 엔티티를 고르세요. 패널 크기 / 폰트 / 색 타입 / 프레임 세대 등은 기기 설정에서 조절합니다.",
+        "description": "매트릭스에 순환 표시할 엔티티를 고르세요. 줄 표기 형식 토큰: {area} 영역, {name} 엔티티 이름, {value} 값, {unit} 단위 — 예: `{area} {value}{unit}`. 패널 크기 / 폰트 / 색 타입 / 프레임 세대 등은 기기 설정에서 조절합니다.",
         "data": {
-          "entities": "표시할 엔티티"
+          "entities": "표시할 엔티티",
+        "row_format": "줄 표기 형식 ({area} {name} {value} {unit})"
         }
       }
     }
@@ -83,8 +84,7 @@
       "color_random": { "name": "랜덤 색상" }
     },
     "text": {
-      "display_text": { "name": "텍스트 표시" },
-      "status_entities": { "name": "상태표시 엔티티" }
+      "display_text": { "name": "텍스트 표시" }
     }
   },
   "services": {
