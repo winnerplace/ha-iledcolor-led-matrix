@@ -130,6 +130,7 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
     coordinator: StatusDisplay = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     coordinator.apply_options()
     coordinator.notify()
+    await coordinator.async_refresh()
 
 
 def _devices(hass: HomeAssistant) -> list[IledColorDevice]:

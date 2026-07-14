@@ -18,18 +18,28 @@ from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     COLOR_DEFAULT,
+    CONF_ANTIALIAS,
     CONF_COLOR,
     CONF_COLOR_ON,
     CONF_COLOR_RANDOM,
+    CONF_COLOR_TYPE,
     CONF_DWELL,
     CONF_EFFECT,
     CONF_ENABLED,
     CONF_ENTITIES,
+    CONF_FLIP_H,
+    CONF_FLIP_V,
+    CONF_FONT,
+    CONF_GENERATION,
+    CONF_HEIGHT,
     CONF_INTERVAL,
     CONF_MODE,
     CONF_MTU,
     CONF_SLIDE,
     CONF_SPEED,
+    CONF_TEXT_HEIGHT,
+    CONF_WEIGHT,
+    CONF_WIDTH,
     DEFAULT_DWELL,
     DEFAULT_EFFECT,
     DEFAULT_INTERVAL,
@@ -103,7 +113,6 @@ class StatusDisplay:
         self.color_on = bool(opts.get(CONF_COLOR_ON, False))
         self.color_random = bool(opts.get(CONF_COLOR_RANDOM, False))
         self.slide = bool(opts.get(CONF_SLIDE, False))
-        self._last_sig = None
         if self.enabled and not self.entities:
             _LOGGER.warning(
                 "Status display is on but no entities are selected; pick them in the "
@@ -124,7 +133,6 @@ class StatusDisplay:
             self._unsub = async_track_time_interval(
                 self.hass, self._tick, timedelta(seconds=self.interval)
             )
-            self.hass.async_create_task(self._tick())
 
     def _rows(self) -> list[str]:
         rows: list[str] = []
@@ -221,7 +229,30 @@ class StatusDisplay:
     def _sig(self, *parts) -> tuple | None:
         if self.color_random:
             return None
-        return (*parts, self.effect, self.speed, self.dwell, self.device.connect_epoch)
+        opts = self.entry.options
+        render_key = tuple(
+            opts.get(key)
+            for key in (
+                CONF_FONT,
+                CONF_WEIGHT,
+                CONF_ANTIALIAS,
+                CONF_FLIP_H,
+                CONF_FLIP_V,
+                CONF_TEXT_HEIGHT,
+                CONF_WIDTH,
+                CONF_HEIGHT,
+                CONF_COLOR_TYPE,
+                CONF_GENERATION,
+            )
+        )
+        return (
+            *parts,
+            self.effect,
+            self.speed,
+            self.dwell,
+            render_key,
+            self.device.connect_epoch,
+        )
 
     async def async_refresh(self) -> None:
         if not self.device.power_on:
