@@ -83,7 +83,8 @@
       "color_random": { "name": "Random color" }
     },
     "text": {
-      "display_text": { "name": "Display text" }
+      "display_text": { "name": "Display text" },
+      "status_entities": { "name": "Status display entities" }
     }
   },
   "services": {
@@ -126,6 +127,14 @@
       "fields": {
         "source": { "name": "Source", "description": "Local file path or http(s) URL." },
         "fit": { "name": "Fit", "description": "How to fit decoded frames (ignored for raw GIF)." }
+      }
+    },
+    "set_status_entities": {
+      "name": "Set status display entities",
+      "description": "Replace the list of entities cycled on the status display.",
+      "fields": {
+        "device_id": { "name": "Device", "description": "Target iLEDcolor device." },
+        "entities": { "name": "Entities", "description": "Entities to display, in order." }
       }
     }
   }

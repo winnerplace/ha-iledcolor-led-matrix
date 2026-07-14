@@ -6,11 +6,11 @@ from homeassistant.components.file_upload import process_uploaded_file
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
+from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CHAR_WRITE1, CHAR_WRITE2, CONF_CAPABILITY, DOMAIN
+from .const import CHAR_WRITE1, CHAR_WRITE2, CONF_CAPABILITY, CONF_ENTITIES, DOMAIN
 from .device import IledColorDevice
 from .protocol import Capability, find_capability_blob, parse_capability
 from .status_display import StatusDisplay
@@ -22,6 +22,7 @@ SERVICE_DISPLAY_TEXT = "display_text"
 SERVICE_DISPLAY_IMAGE = "display_image"
 SERVICE_DISPLAY_GIF = "display_gif"
 SERVICE_DISPLAY_COLOR = "display_color"
+SERVICE_SET_STATUS_ENTITIES = "set_status_entities"
 
 SEND_RAW_SCHEMA = vol.Schema(
     {
@@ -66,6 +67,12 @@ DISPLAY_IMAGE_SCHEMA = vol.All(
         }
     ),
     cv.has_at_least_one_key("source", "file"),
+)
+SET_STATUS_ENTITIES_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+        vol.Required("entities"): vol.All(cv.ensure_list, [cv.entity_id]),
+    }
 )
 DISPLAY_GIF_SCHEMA = vol.All(
     vol.Schema(
@@ -207,6 +214,19 @@ def _register_services(hass: HomeAssistant) -> None:
                 speed=call.data.get("speed"),
             )
 
+    async def _set_status_entities(call: ServiceCall) -> None:
+        device_entry = dr.async_get(hass).async_get(call.data["device_id"])
+        if device_entry is None:
+            raise HomeAssistantError(f"unknown device: {call.data['device_id']}")
+        for entry_id in device_entry.config_entries:
+            runtime = hass.data.get(DOMAIN, {}).get(entry_id)
+            if runtime is not None:
+                await runtime["coordinator"].async_set(
+                    **{CONF_ENTITIES: call.data["entities"]}
+                )
+                return
+        raise HomeAssistantError(f"not an iledcolor device: {call.data['device_id']}")
+
     async def _display_color(call: ServiceCall) -> None:
         color = tuple(call.data["color"])
         for device in _devices(hass):
@@ -222,6 +242,9 @@ def _register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, SERVICE_DISPLAY_IMAGE, _display_image, schema=DISPLAY_IMAGE_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_DISPLAY_GIF, _display_gif, schema=DISPLAY_GIF_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_DISPLAY_COLOR, _display_color, schema=DISPLAY_COLOR_SCHEMA)
+    hass.services.async_register(
+        DOMAIN, SERVICE_SET_STATUS_ENTITIES, _set_status_entities, schema=SET_STATUS_ENTITIES_SCHEMA
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -237,6 +260,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 SERVICE_DISPLAY_IMAGE,
                 SERVICE_DISPLAY_GIF,
                 SERVICE_DISPLAY_COLOR,
+                SERVICE_SET_STATUS_ENTITIES,
             ):
                 hass.services.async_remove(DOMAIN, service)
     return unloaded

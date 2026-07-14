@@ -272,3 +272,22 @@ display_color:
           min: 0
           max: 255
           mode: box
+
+set_status_entities:
+  name: Set status display entities
+  description: Replace the list of entities cycled on the status display.
+  fields:
+    device_id:
+      name: Device
+      description: Target iLEDcolor device.
+      required: true
+      selector:
+        device:
+          integration: iledcolor
+    entities:
+      name: Entities
+      description: Entities to display, in order.
+      required: true
+      selector:
+        entity:
+          multiple: true

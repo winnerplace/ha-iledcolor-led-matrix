@@ -83,7 +83,8 @@
       "color_random": { "name": "랜덤 색상" }
     },
     "text": {
-      "display_text": { "name": "텍스트 표시" }
+      "display_text": { "name": "텍스트 표시" },
+      "status_entities": { "name": "상태표시 엔티티" }
     }
   },
   "services": {
@@ -150,6 +151,14 @@
         "effect": { "name": "효과", "description": "0 정지 / 1 좌 / 2 우 / 3 상 / 4 하 / 5 눈송이 / 6 두루마리 / 7 레이저." },
         "speed": { "name": "속도", "description": "스크롤/애니메이션 속도 (낮을수록 느림)." },
         "dwell": { "name": "정지 시간", "description": "페이지 효과의 정지. 0 = 무정지." }
+      }
+    },
+    "set_status_entities": {
+      "name": "상태표시 엔티티 설정",
+      "description": "상태표시에 순환 표시할 엔티티 목록을 교체합니다.",
+      "fields": {
+        "device_id": { "name": "기기", "description": "대상 iLEDcolor 기기." },
+        "entities": { "name": "엔티티", "description": "표시할 엔티티 (순서대로)." }
       }
     }
   }
