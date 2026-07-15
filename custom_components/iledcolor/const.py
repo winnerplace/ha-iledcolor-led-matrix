@@ -28,6 +28,16 @@ CONF_ENABLED = "enabled"
 CONF_ROW_FORMAT = "row_format"
 ROW_FORMAT_DEFAULT = "{area} {name} {value}{unit}"
 CONF_CUSTOM_TEXTS = "custom_texts"
+CONF_ROWS = "rows"
+
+
+def merged_rows(options) -> list[str]:
+    rows = options.get(CONF_ROWS)
+    if rows is not None:
+        return [str(row).strip() for row in rows if str(row).strip()]
+    entities = [str(e) for e in options.get(CONF_ENTITIES, [])]
+    texts = [str(t).strip() for t in options.get(CONF_CUSTOM_TEXTS, []) if str(t).strip()]
+    return [*entities, *texts]
 
 CONF_MODE = "mode"
 MODE_STATUS = "status"

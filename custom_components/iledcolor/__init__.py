@@ -14,7 +14,7 @@ from homeassistant.helpers import (
 )
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CHAR_WRITE1, CHAR_WRITE2, CONF_CAPABILITY, CONF_ENTITIES, DOMAIN
+from .const import CHAR_WRITE1, CHAR_WRITE2, CONF_CAPABILITY, DOMAIN
 from .device import IledColorDevice
 from .protocol import Capability, find_capability_blob, parse_capability
 from .status_display import StatusDisplay
@@ -235,9 +235,7 @@ def _register_services(hass: HomeAssistant) -> None:
         for entry_id in device_entry.config_entries:
             runtime = hass.data.get(DOMAIN, {}).get(entry_id)
             if runtime is not None:
-                await runtime["coordinator"].async_set(
-                    **{CONF_ENTITIES: call.data["entities"]}
-                )
+                await runtime["coordinator"].async_set_entities(call.data["entities"])
                 return
         raise HomeAssistantError(f"not an iledcolor device: {call.data['device_id']}")
 

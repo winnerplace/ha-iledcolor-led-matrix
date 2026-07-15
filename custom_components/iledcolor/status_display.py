@@ -7,7 +7,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, State, callback
+from homeassistant.core import HomeAssistant, State, callback, valid_entity_id
 from homeassistant.helpers import (
     area_registry as ar,
     device_registry as dr,
@@ -23,11 +23,9 @@ from .const import (
     CONF_COLOR_ON,
     CONF_COLOR_RANDOM,
     CONF_COLOR_TYPE,
-    CONF_CUSTOM_TEXTS,
     CONF_DWELL,
     CONF_EFFECT,
     CONF_ENABLED,
-    CONF_ENTITIES,
     CONF_FLIP_H,
     CONF_FLIP_V,
     CONF_FONT,
@@ -37,6 +35,7 @@ from .const import (
     CONF_MODE,
     CONF_MTU,
     CONF_ROW_FORMAT,
+    CONF_ROWS,
     CONF_SLIDE,
     CONF_SPEED,
     CONF_TEXT_HEIGHT,
@@ -49,6 +48,7 @@ from .const import (
     MODE_STATUS,
     MODE_TEXT,
     ROW_FORMAT_DEFAULT,
+    merged_rows,
 )
 from .device import IledColorDevice
 
@@ -72,8 +72,7 @@ class StatusDisplay:
         self.interval = DEFAULT_INTERVAL
         self.mode = MODE_TEXT
         self.enabled = False
-        self.entities: list[str] = []
-        self.custom_texts: list[str] = []
+        self.rows: list[str] = []
         self.effect = DEFAULT_EFFECT
         self.speed = DEFAULT_SPEED
         self.dwell = DEFAULT_DWELL
@@ -109,8 +108,7 @@ class StatusDisplay:
             mode = MODE_STATUS if opts.get(CONF_ENABLED, False) else MODE_TEXT
         self.mode = mode
         self.enabled = mode == MODE_STATUS
-        self.entities = list(opts.get(CONF_ENTITIES, []))
-        self.custom_texts = [t.strip() for t in opts.get(CONF_CUSTOM_TEXTS, []) if t.strip()]
+        self.rows = merged_rows(opts)
         self.effect = int(opts.get(CONF_EFFECT, DEFAULT_EFFECT))
         self.speed = int(opts.get(CONF_SPEED, DEFAULT_SPEED))
         self.dwell = int(opts.get(CONF_DWELL, DEFAULT_DWELL))
@@ -120,9 +118,9 @@ class StatusDisplay:
         self.color_random = bool(opts.get(CONF_COLOR_RANDOM, False))
         self.slide = bool(opts.get(CONF_SLIDE, False))
         self.row_format = str(opts.get(CONF_ROW_FORMAT) or ROW_FORMAT_DEFAULT)
-        if self.enabled and not (self.entities or self.custom_texts):
+        if self.enabled and not self.rows:
             _LOGGER.warning(
-                "Status display is on but no entities are selected; pick them in the "
+                "Status display is on but no rows are configured; pick them in the "
                 "integration options (Settings > Devices & Services > iLEDcolor > Configure)"
             )
         self._reschedule()
@@ -131,12 +129,16 @@ class StatusDisplay:
         opts = {**self.entry.options, **changes}
         self.hass.config_entries.async_update_entry(self.entry, options=opts)
 
+    async def async_set_entities(self, entities: list[str]) -> None:
+        texts = [row for row in self.rows if not valid_entity_id(row)]
+        await self.async_set(**{CONF_ROWS: [*entities, *texts]})
+
     @callback
     def _reschedule(self) -> None:
         if self._unsub is not None:
             self._unsub()
             self._unsub = None
-        if self.enabled and (self.entities or self.custom_texts) and self.interval > 0:
+        if self.enabled and self.rows and self.interval > 0:
             self._unsub = async_track_time_interval(
                 self.hass, self._tick, timedelta(seconds=self.interval)
             )
@@ -152,21 +154,26 @@ class StatusDisplay:
             row = row.replace(token, part)
         return " ".join(row.split())
 
+    def _entity_rows(self) -> list[str]:
+        return [row for row in self.rows if valid_entity_id(row)]
+
     def _rows(self) -> list[str]:
         rows: list[str] = []
-        for entity_id in self.entities:
-            state = self.hass.states.get(entity_id)
+        for item in self.rows:
+            if not valid_entity_id(item):
+                rows.append(item)
+                continue
+            state = self.hass.states.get(item)
             if state is None or str(state.state).lower() in _INVALID:
                 continue
-            name = state.attributes.get("friendly_name", entity_id)
-            name = self._strip_device(entity_id, name)
+            name = state.attributes.get("friendly_name", item)
+            name = self._strip_device(item, name)
             unit = state.attributes.get("unit_of_measurement", "")
-            area = self._area_name(entity_id)
-            value = self._localized_state(entity_id, state)
+            area = self._area_name(item)
+            value = self._localized_state(item, state)
             row = self._format_row(area, name, value, unit)
             if row:
                 rows.append(row)
-        rows.extend(self.custom_texts)
         return rows
 
     async def _load_translations(self) -> None:
@@ -174,7 +181,7 @@ class StatusDisplay:
         ent_reg = er.async_get(self.hass)
         platforms: set[str] = set()
         domains: set[str] = set()
-        for entity_id in self.entities:
+        for entity_id in self._entity_rows():
             domains.add(entity_id.split(".", 1)[0])
             entry = ent_reg.async_get(entity_id)
             if entry and entry.platform:
@@ -208,8 +215,35 @@ class StatusDisplay:
             if key in self._translations:
                 return self._translations[key]
         return self._translations.get(
-            f"component.{domain}.entity_component._.state.{raw}", raw
+            f"component.{domain}.entity_component._.state.{raw}",
+            self._rounded_state(entity_id, state),
         )
+
+    def _display_precision(self, entity_id: str) -> int | None:
+        entry = er.async_get(self.hass).async_get(entity_id)
+        if entry is None:
+            return None
+        sensor_options = entry.options.get("sensor", {})
+        precision = sensor_options.get("display_precision")
+        if precision is None:
+            precision = sensor_options.get("suggested_display_precision")
+        return precision
+
+    def _rounded_state(self, entity_id: str, state: State) -> str:
+        raw = state.state
+        try:
+            number = float(raw)
+        except (TypeError, ValueError):
+            return raw
+        precision = None
+        if entity_id.split(".", 1)[0] == "sensor":
+            precision = self._display_precision(entity_id)
+        if precision is None:
+            decimals = raw.partition(".")[2]
+            if len(decimals) <= 1:
+                return raw
+            precision = 1
+        return f"{number:z.{precision}f}"
 
     def _strip_device(self, entity_id: str, name: str) -> str:
         entry = er.async_get(self.hass).async_get(entity_id)

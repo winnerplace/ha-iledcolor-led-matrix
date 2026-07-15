@@ -14,19 +14,72 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import callback
-from homeassistant.helpers import selector
+from homeassistant.core import HomeAssistant, callback, valid_entity_id
+from homeassistant.helpers import (
+    area_registry as ar,
+    device_registry as dr,
+    entity_registry as er,
+    selector,
+)
 
 from .const import (
     CONF_CAPABILITY,
     CONF_CUSTOM_TEXTS,
     CONF_ENTITIES,
     CONF_ROW_FORMAT,
+    CONF_ROWS,
     DOMAIN,
     ROW_FORMAT_DEFAULT,
     SERVICE_UUID,
+    merged_rows,
 )
 from .protocol import find_capability_blob, parse_capability
+
+ROW_DOMAINS = ["sensor", "binary_sensor", "weather", "climate"]
+
+ROW_FORMAT_TOKENS = [
+    selector.SelectOptionDict(value="{area}", label="공간 {area}"),
+    selector.SelectOptionDict(value="{name}", label="이름 {name}"),
+    selector.SelectOptionDict(value="{value}", label="값 {value}"),
+    selector.SelectOptionDict(value="{unit}", label="단위 {unit}"),
+    selector.SelectOptionDict(value="{value}{unit}", label="값+단위 {value}{unit}"),
+]
+
+
+def _reorderable(config: selector.SelectSelectorConfig) -> selector.SelectSelector:
+    sel = selector.SelectSelector(config)
+    sel.config["reorder"] = True
+    return sel
+
+
+def _entity_area(hass: HomeAssistant, entity_id: str) -> str:
+    entry = er.async_get(hass).async_get(entity_id)
+    if entry is None:
+        return ""
+    area_id = entry.area_id
+    if area_id is None and entry.device_id:
+        device = dr.async_get(hass).async_get(entry.device_id)
+        area_id = device.area_id if device else None
+    if area_id is None:
+        return ""
+    area = ar.async_get(hass).async_get_area(area_id)
+    return area.name if area else ""
+
+
+def _row_options(hass: HomeAssistant, current: list[str]) -> list[selector.SelectOptionDict]:
+    options: list[selector.SelectOptionDict] = []
+    seen: set[str] = set()
+    for state in hass.states.async_all(ROW_DOMAINS):
+        friendly = state.attributes.get("friendly_name") or state.entity_id
+        area = _entity_area(hass, state.entity_id)
+        label = f"{area} {friendly}".strip()
+        options.append(selector.SelectOptionDict(value=state.entity_id, label=label))
+        seen.add(state.entity_id)
+    for row in current:
+        if valid_entity_id(row) and row not in seen:
+            options.append(selector.SelectOptionDict(value=row, label=row))
+    options.sort(key=lambda option: option["label"])
+    return options
 
 
 def _label(info: BluetoothServiceInfoBleak) -> str:
@@ -122,30 +175,39 @@ class IledColorOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(data={**self._entry.options, **user_input})
+            rows = [r.strip() for r in user_input.get(CONF_ROWS, []) if r.strip()]
+            row_format = " ".join(user_input.get(CONF_ROW_FORMAT, [])).strip()
+            options = {
+                **self._entry.options,
+                CONF_ROWS: rows,
+                CONF_ROW_FORMAT: row_format or ROW_FORMAT_DEFAULT,
+            }
+            options.pop(CONF_ENTITIES, None)
+            options.pop(CONF_CUSTOM_TEXTS, None)
+            return self.async_create_entry(data=options)
         opts = self._entry.options
+        current_rows = merged_rows(opts)
+        format_tokens = str(opts.get(CONF_ROW_FORMAT) or ROW_FORMAT_DEFAULT).split()
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(
-                        CONF_ENTITIES, default=opts.get(CONF_ENTITIES, [])
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
+                    vol.Optional(CONF_ROWS, default=current_rows): _reorderable(
+                        selector.SelectSelectorConfig(
+                            options=_row_options(self.hass, current_rows),
                             multiple=True,
-                            reorder=True,
-                            domain=["sensor", "binary_sensor", "weather", "climate"],
+                            custom_value=True,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Optional(
-                        CONF_CUSTOM_TEXTS, default=opts.get(CONF_CUSTOM_TEXTS, [])
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(multiple=True)
+                    vol.Optional(CONF_ROW_FORMAT, default=format_tokens): _reorderable(
+                        selector.SelectSelectorConfig(
+                            options=ROW_FORMAT_TOKENS,
+                            multiple=True,
+                            custom_value=True,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
                     ),
-                    vol.Optional(
-                        CONF_ROW_FORMAT,
-                        default=opts.get(CONF_ROW_FORMAT, ROW_FORMAT_DEFAULT),
-                    ): selector.TextSelector(),
                 }
             ),
         )
